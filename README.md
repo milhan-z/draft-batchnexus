@@ -1,18 +1,37 @@
-# BatchNexus Control Tower
+<div align="center">
 
-> One operational brain for intake, QC, lot tracking, warehouse, and dispatch.
+<img src="public/logo.png" alt="BatchNexus Logo" width="120" style="margin-bottom: 20px;" />
 
-**BatchNexus Control Tower** is an AI-assisted manufacturing operations control tower built for **Sima Arôme**, a natural extracts manufacturer serving F&B, cosmetics, and wellness brands. 
+# 🏭 BatchNexus Control Tower
 
-Created for **CyberHack 2026 Sima Arôme Manufacturing Innovation Challenge**.
+**One operational brain for intake, QC, lot tracking, warehouse, and dispatch.**<br>
+An AI-assisted manufacturing operations control tower built for **Sima Arôme**.
 
-Product promise: **Input once. Trace everything. Slot safely. Answer instantly.**
+🏆 **CyberHack 2026 — Sima Arôme Manufacturing Innovation Challenge** 🏆
 
+<br>
 
-## Submission Links
-- **Live Demo Link:** [https://main.dix13trs8jql.amplifyapp.com/]
-- **Pitch Deck:** [https://drive.google.com/file/d/11fcIdT7om3cR-50LKPJ_t0gKqQpdLx5f/view?usp=drive_link]
-- **Demo Video:** [https://drive.google.com/file/d/1TTIkyxckptVJMiJfl1JBM6_qfTg5Xw-b/view?usp=drive_link]
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Groq AI](https://img.shields.io/badge/Groq_Llama_3-F55036?style=for-the-badge&logo=probot&logoColor=white)
+![AWS Amplify](https://img.shields.io/badge/AWS_Amplify-FF9900?style=for-the-badge&logo=aws-amplify&logoColor=white)
+
+<br>
+
+### 🔗 Official Submission Links
+
+🌍 **[Live Demo Application](https://main.dix13trs8jql.amplifyapp.com/)** &nbsp; | &nbsp; 📑 **[Pitch Deck Presentation](https://drive.google.com/file/d/11fcIdT7om3cR-50LKPJ_t0gKqQpdLx5f/view?usp=drive_link)** &nbsp; | &nbsp; 🎬 **[Demo Video](https://drive.google.com/file/d/1TTIkyxckptVJMiJfl1JBM6_qfTg5Xw-b/view?usp=drive_link)**
+
+<br>
+
+*Product promise:* **"Input once. Trace everything. Slot safely. Answer instantly."**
+
+</div>
+
+---
 
 ## Screenshots & Features Tour
 
