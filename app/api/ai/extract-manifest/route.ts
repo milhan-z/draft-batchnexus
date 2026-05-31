@@ -150,9 +150,10 @@ function parseManifestLocally(text: string) {
 
 import { createGroq } from "@ai-sdk/groq";
 
-// Use Groq API Key (hardcoded and obfuscated to bypass GitHub secret scanner)
-const groqKey = process.env.GROQ_API_KEY || ("gsk_" + "AUBDi8slRn" + "Yqc12vmoqY" + "WGdyb3FYkh" + "E1v2dKm4sf" + "i0AMP70bXbs5");
-const customGroq = createGroq({ apiKey: groqKey });
+// Groq API key is read from the environment only. If it is missing, the route
+// gracefully falls back to the deterministic local parser below.
+const groqKey = process.env.GROQ_API_KEY;
+const customGroq = groqKey ? createGroq({ apiKey: groqKey }) : null;
 
 export async function POST(req: Request) {
   try {
@@ -162,7 +163,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No text provided" }, { status: 400 });
     }
     
-    if (groqKey) {
+    if (groqKey && customGroq) {
       try {
         const result = await generateObject({
           model: customGroq("llama-3.1-8b-instant"),

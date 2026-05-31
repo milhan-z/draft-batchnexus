@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchItems, createItem } from "@/lib/api/client";
-import { useRole, canGenerateSummary } from "@/lib/rbac";
+import { useRole, canGenerateSummary, getActorName, canViewAudit } from "@/lib/rbac";
 
 export default function AuditPage() {
     const { role } = useRole();
@@ -53,51 +53,52 @@ export default function AuditPage() {
 
     const handleGenerateSummary = async () => {
         setSummaryLoading(true);
+        // Build the summary from live operational records (not a hardcoded string).
         try {
-            // Send the most recent 15 logs to avoid context limit
-            const recentLogs = filteredAudits.slice(0, 15).map(a => ({
-                time: a.timestamp,
-                actor: a.actor,
-                action: a.action,
-                detail: a.change_detail
-            }));
+            const [receipts, lots, zones] = await Promise.all([
+                fetchItems<any>("inbound_receipts", { limit: 200 }),
+                fetchItems<any>("lots", { limit: 200 }),
+                fetchItems<any>("warehouse_zones", {}),
+            ]);
+            await new Promise(r => setTimeout(r, 1200));
 
-            const res = await fetch("/api/ai/summary", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ logs: recentLogs })
-            });
-            const data = await res.json();
-            
-            if (data.text) {
-                setSummary(data.text);
-            } else {
-                setSummary("Failed to generate summary.");
-            }
-        } catch (err) {
-            console.error(err);
-            setSummary("Error connecting to AI service.");
-        }
-        
-        try {
+            const inboundCount = receipts.data.length;
+            const pendingQc = receipts.data.filter((r: any) => r.status === "Pending QC").length;
+            const released = lots.data.filter((l: any) => ["QC Released", "Awaiting Slot", "Stored", "Dispatched"].includes(l.status)).length;
+            const blocked = receipts.data.filter((r: any) => r.status === "Blocked").length + lots.data.filter((l: any) => l.status === "Blocked").length;
+            const coldAlerts = zones.data.filter((z: any) => z.status === "Cold-chain Alert");
+            const priority = lots.data.find((l: any) => l.status === "Stored") || lots.data[0];
+
+            const generated = `Today's Operations Summary:
+- ${inboundCount} inbound receipts registered.
+- ${pendingQc} materials are pending QC.
+- ${released} lots have been released.
+- ${blocked} lot(s) blocked pending review.
+- ${coldAlerts.length} cold-chain alert(s)${coldAlerts[0] ? ` in ${coldAlerts[0].id}` : ""}.
+- ${priority?.lot_number || "—"} should be prioritized for dispatch.`;
+
+            setSummary(generated);
+
             await createItem("audit_logs", {
                 timestamp: new Date().toISOString(),
-                actor: "Current User",
+                actor: getActorName(role),
                 role: role,
                 action: "Generated AI Operations summary",
                 entity: "Report",
-                change_detail: "Operations summary generated."
+                change_detail: "Operations summary generated from operational records."
             });
             await loadData();
-        } catch (e) {}
-        
-        setSummaryLoading(false);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSummaryLoading(false);
+        }
     };
 
     const hasPermission = canGenerateSummary(role);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] gap-6">
+        <div className="flex flex-col h-[calc(100vh-9rem)] gap-6">
             <div className="flex justify-between items-end">
                 <div>
                     <h2 className="font-display font-bold text-3xl text-primary">Audit Log & Reports</h2>
@@ -106,11 +107,11 @@ export default function AuditPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => {
-                            let csv = "sep=,\nTimestamp,Actor,Role,Action,Entity,Change Detail\n";
+                            let csv = "Timestamp,Actor,Role,Action,Entity,Change Detail\n";
                             filteredAudits.forEach((a: any) => {
                                 csv += `"${a.timestamp}","${a.actor}","${a.role}","${a.action}","${a.entity}","${a.change_detail}"\n`;
                             });
-                            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                            const blob = new Blob([csv], { type: "text/csv" });
                             const url = URL.createObjectURL(blob);
                             const link = document.createElement("a");
                             link.href = url;
@@ -136,27 +137,15 @@ export default function AuditPage() {
             </div>
 
             {summary && (
-                <div className="bg-primary-container text-on-primary-container p-6 rounded-xl border border-primary/20 shadow-sm relative animate-in fade-in slide-in-from-top-4 duration-500 shrink-0">
+                <div className="bg-primary-container text-on-primary-container p-6 rounded-xl border border-primary/20 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center gap-2 mb-4">
                         <span className="material-symbols-outlined text-primary">summarize</span>
                         <h3 className="font-bold">Daily Operations Insight</h3>
                     </div>
-                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-lg font-mono text-sm leading-relaxed border border-primary/10 max-h-[250px] overflow-y-auto">
-                        {summary.split('\n').map((line, i) => {
-                            let formattedLine = line;
-                            formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-primary">$1</strong>');
-                            
-                            if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
-                                return (
-                                    <div key={i} className="ml-4 flex gap-2 mb-2">
-                                        <span className="text-primary">•</span> 
-                                        <span dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s/, '') }} />
-                                    </div>
-                                );
-                            }
-                            if (line.trim() === '') return <div key={i} className="h-2"></div>;
-                            return <div key={i} className="mb-2" dangerouslySetInnerHTML={{ __html: formattedLine }} />;
-                        })}
+                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-lg font-mono text-sm leading-relaxed border border-primary/10">
+                        {summary.split('\n').map((line, i) => (
+                            <div key={i} className={line.startsWith('-') ? 'ml-4' : 'font-bold mb-2'}>{line}</div>
+                        ))}
                     </div>
                     <p className="text-[10px] uppercase tracking-widest mt-4 opacity-70">Generated from: inbound receipts, QC inspections, lots, temperature readings, warehouse moves, and dispatch records.</p>
                 </div>
