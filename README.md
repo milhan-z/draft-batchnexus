@@ -19,23 +19,47 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 
 ## 📸 Screenshots
 
-*(Hackathon Note: Please replace the remaining placeholder images with actual screenshots of your application)*
+*(Hackathon Note: Please replace the placeholder images with actual screenshots of your application)*
 
-### Dashboard & KPI
+### 1. Dashboard & KPI
 *Real-time metrics and cold-chain monitoring*
 <img width="1920" alt="Dashboard" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
 
-### AI Inbound Intake
+### 2. AI Inbound Intake
 *AI Copilot auto-filling DO data*
 ![Inbound](public/screenshots/inbound.png)
 
-### Computer Vision QC
+### 3. Computer Vision QC
 *On-device visual analysis for sample screening*
 ![QC Station](public/screenshots/qc.png)
 
-### Smart Warehouse Slotting
-*Drag-and-drop hazard-aware slotting*
+### 4. PPIC Production Board
+*Drag-and-drop kanban for production readiness*
+![PPIC Board](public/screenshots/ppic.png)
+
+### 5. Lot Traceability Timeline
+*Event-based history built from each lot's real linked records*
+![Lots Traceability](public/screenshots/lots.png)
+
+### 6. Smart Warehouse Slotting
+*Drag-and-drop hazard-aware slotting and cold-chain charts*
 ![Warehouse](public/screenshots/warehouse.png)
+
+### 7. Dispatch & Fulfillment
+*Outbound sample processing and staging*
+![Dispatch](public/screenshots/dispatch.png)
+
+### 8. Ops Copilot
+*Natural-language queries answered from operational records*
+![Ops Copilot](public/screenshots/copilot.png)
+
+### 9. AI Operations Summary
+*Manager-ready daily summary generated from live records*
+![AI Summary](public/screenshots/summary.png)
+
+### 10. Immutable Audit Log
+*Ledger of actor, role, action, entity, and timestamp*
+![Audit Log](public/screenshots/audit.png)
 
 ---
 
