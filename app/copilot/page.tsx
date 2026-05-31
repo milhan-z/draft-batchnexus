@@ -1,21 +1,26 @@
 "use client";
 import { createItem } from "@/lib/api/client";
 import { useRole } from "@/lib/rbac";
-import { useChat } from "ai/react";
-import React from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, UIMessage } from "ai";
+import React, { useState } from "react";
 
 export default function CopilotPage() {
     const { role } = useRole();
-    const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-        api: "/api/ai/copilot",
-        initialMessages: [
+    const [input, setInput] = useState("");
+    
+    const { messages, sendMessage, status } = useChat({
+        transport: new DefaultChatTransport({ api: "/api/ai/copilot" }),
+        messages: [
             {
                 id: "1",
                 role: "assistant",
-                content: "Hello! I am Ops Copilot. I can help you query real-time operational records, audit logs, and status updates across the facility. Try asking about a lot, material, receipt, or warehouse zone."
+                parts: [{ type: "text", text: "Hello! I am Ops Copilot. I can help you query real-time operational records, audit logs, and status updates across the facility. Try asking about a lot, material, receipt, or warehouse zone." }]
             }
-        ]
+        ] as UIMessage[]
     });
+
+    const isLoading = status === "submitted" || status === "streaming";
 
     const suggestedPrompts = [
         "Where is LOT-2026-051?",
@@ -25,9 +30,11 @@ export default function CopilotPage() {
         "Show system status summary",
     ];
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
+    const handleSend = async (e: React.FormEvent, overrideText?: string) => {
+        e?.preventDefault?.();
+        const textToSubmit = overrideText || input;
+        
+        if (!textToSubmit.trim() || isLoading) return;
 
         try {
             await createItem("audit_logs", {
@@ -36,11 +43,14 @@ export default function CopilotPage() {
                 role: role,
                 action: "Queried Ops Copilot",
                 entity: "Copilot",
-                change_detail: `Asked: "${input}"`
+                change_detail: `Asked: "${textToSubmit}"`
             });
         } catch (err) {}
 
-        handleSubmit(e);
+        sendMessage({ id: Date.now().toString(), parts: [{ type: "text", text: textToSubmit }], role: 'user' });
+        if (!overrideText) {
+            setInput("");
+        }
     };
 
     return (
@@ -64,7 +74,7 @@ export default function CopilotPage() {
                                     </span>
                                 </div>
                                 <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                    {msg.content}
+                                    {msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')}
                                 </div>
                             </div>
                         </div>
@@ -84,13 +94,7 @@ export default function CopilotPage() {
                         {suggestedPrompts.map((p, i) => (
                             <button
                                 key={i}
-                                onClick={() => {
-                                    handleInputChange({ target: { value: p } } as any);
-                                    setTimeout(() => {
-                                        const form = document.getElementById("copilot-form") as HTMLFormElement;
-                                        if (form) form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-                                    }, 100);
-                                }}
+                                onClick={(e) => handleSend(e, p)}
                                 disabled={isLoading}
                                 className="px-3 py-1.5 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors bg-white disabled:opacity-50"
                             >
@@ -104,7 +108,7 @@ export default function CopilotPage() {
                             className="flex-1 bg-white border border-outline-variant rounded-lg px-4 py-3 text-sm focus:border-primary focus:ring-1"
                             placeholder="Ask about a lot, material, receipt, warehouse..."
                             value={input}
-                            onChange={handleInputChange}
+                            onChange={(e) => setInput(e.target.value)}
                             disabled={isLoading}
                         />
                         <button
