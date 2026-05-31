@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useRole, ROLE_ACCESS } from "@/lib/rbac";
 
 export default function DashboardPage() {
-    const role = useRole();
+    const { role } = useRole();
     const [stats, setStats] = useState({ inbound: 0, pendingQc: 0, released: 0, warehouseAlerts: 0, samplesPending: 0 });
     const [recentLots, setRecentLots] = useState<any[]>([]);
     const [recentAudits, setRecentAudits] = useState<any[]>([]);
