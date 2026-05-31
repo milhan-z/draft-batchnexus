@@ -47,7 +47,7 @@ export const ROLE_ACCESS: Record<string, string[]> = {
     "QC Staff": ["/", "/qc", "/lots", "/audit"],
     "PPIC Planner": ["/", "/ppic", "/lots", "/copilot"],
     "Warehouse Admin": ["/", "/warehouse", "/lots", "/audit"],
-    "Customer Service": ["/lots", "/dispatch", "/copilot"],
+    "Customer Service": ["/", "/lots", "/dispatch", "/copilot"],
 };
 
 // ── Route-to-capability mapping ────────────────────────────────
@@ -154,5 +154,10 @@ export function canViewAudit(role: UserRole | string): boolean {
 
 /** Full audit access (generate summary from audit, export all) — Manager/Admin only */
 export function canManageAudit(role: UserRole | string): boolean {
+    return ["Operations Manager", "Admin"].includes(role);
+}
+
+/** Only Operations Manager and Admin can create dispatches */
+export function canCreateDispatch(role: UserRole | string): boolean {
     return ["Operations Manager", "Admin"].includes(role);
 }

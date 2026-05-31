@@ -40,7 +40,7 @@ export default function WarehousePage() {
             setZones(zoneRes.data);
             setTempReadings(tempRes.data);
 
-            const pending = lotRes.data.filter((l: any) => l.status === "Awaiting Slot");
+            const pending = lotRes.data.filter((l: any) => ["Awaiting Slot", "Ready for Warehouse"].includes(l.status));
             if (pending.length > 0 && !selectedLot) {
                 setSelectedLot(pending[0]);
             }
@@ -55,7 +55,7 @@ export default function WarehousePage() {
         loadData();
     }, []);
 
-    const pendingSlotting = lots.filter(l => l.status === "Awaiting Slot");
+    const pendingSlotting = lots.filter(l => ["Awaiting Slot", "Ready for Warehouse"].includes(l.status));
 
     const handleAssignSlot = async () => {
         if (!selectedLot) return;

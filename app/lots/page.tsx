@@ -65,10 +65,22 @@ export default function LotsTraceabilityPage() {
         return suppliers.get(supId)?.name || "Unknown";
     };
 
-    const filteredLots = lots.filter(l => 
-        l.lot_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getMaterialName(l.material_id).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredLots = lots.filter(l => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        const matName = getMaterialName(l.material_id).toLowerCase();
+        const supName = getSupplierName(l.receipt_id || l.source_receipt_id).toLowerCase();
+        const receipt = receipts.get(l.receipt_id || l.source_receipt_id);
+        const receiptNo = (receipt?.receipt_no || "").toLowerCase();
+        return (
+            l.lot_number.toLowerCase().includes(q) ||
+            matName.includes(q) ||
+            supName.includes(q) ||
+            (l.status || "").toLowerCase().includes(q) ||
+            receiptNo.includes(q) ||
+            (l.current_location || "").toLowerCase().includes(q)
+        );
+    });
 
     const renderTraceabilityTimeline = () => {
         if (!selectedLot) return null;

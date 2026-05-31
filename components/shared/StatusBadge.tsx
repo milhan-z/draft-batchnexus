@@ -27,6 +27,14 @@ export const StatusBadge = ({ status }: { status: string }) => {
             colorClass = "bg-error-container text-on-error-container";
             icon = "block";
             break;
+        case "On Hold":
+            colorClass = "bg-amber-100 text-amber-800";
+            icon = "pause_circle";
+            break;
+        case "Ready for Warehouse":
+            colorClass = "bg-blue-100 text-blue-800";
+            icon = "warehouse";
+            break;
         case "Lot Created":
         case "In Dispatch":
             colorClass = "bg-tertiary-container text-on-tertiary-container";

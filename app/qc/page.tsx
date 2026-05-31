@@ -123,7 +123,8 @@ export default function QCStationPage() {
                 source_receipt_id: selectedTask.id,
                 material_id: selectedTask.material_id,
                 quantity: selectedTask.quantity,
-                status: "Awaiting Slot",
+                status: "QC Released",
+                date_created: new Date().toISOString(),
             });
 
             // 4. Write explicit audit entries so the trail is complete even when
@@ -377,15 +378,51 @@ export default function QCStationPage() {
                         )}
 
                         {/* Human Decision Panel */}
-                        {selectedTask.status === "Pending QC" && (
+                        {selectedTask.status === "Pending QC" && (() => {
+                            const scores = getAIScores(selectedTask.id);
+                            const conf = visionResult ? visionResult.confidence : scores.confidence;
+                            const fmRisk = visionResult ? visionResult.foreignMatterRisk : scores.foreignRisk;
+                            const isLowConfidence = conf < 70;
+                            const isReviewRecommended = conf >= 70 && conf < 85;
+                            const isForeignHigh = fmRisk === "High";
+                            const shouldBlockApprove = isLowConfidence || isForeignHigh;
+                            return (
                             <div className="bg-white rounded-xl border border-outline-variant p-6 shadow-sm">
+                                {/* Confidence Policy Warnings */}
+                                {isLowConfidence && (
+                                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex items-start gap-2">
+                                        <span className="material-symbols-outlined text-[16px] mt-0.5">error</span>
+                                        <div>
+                                            <p className="font-bold">Re-inspection Required</p>
+                                            <p>AI confidence {conf}% is below 70%. Human re-inspection is mandatory before approval.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {isReviewRecommended && (
+                                    <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2">
+                                        <span className="material-symbols-outlined text-[16px] mt-0.5">warning</span>
+                                        <div>
+                                            <p className="font-bold">Review Recommended</p>
+                                            <p>AI confidence {conf}% is between 70-84%. Thorough manual review recommended before approval.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {isForeignHigh && (
+                                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex items-start gap-2">
+                                        <span className="material-symbols-outlined text-[16px] mt-0.5">gpp_bad</span>
+                                        <div>
+                                            <p className="font-bold">Foreign Matter Risk: High</p>
+                                            <p>Material is flagged for possible contamination. Approval is blocked per policy.</p>
+                                        </div>
+                                    </div>
+                                )}
                                 <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant text-center mb-4">Human Decision</p>
                                 <div className="space-y-3 max-w-md mx-auto">
                                     <button 
                                         onClick={() => setShowConfirm(true)}
-                                        disabled={!hasPermission}
+                                        disabled={!hasPermission || shouldBlockApprove}
                                         className={`w-full font-bold py-4 rounded-sm text-sm uppercase tracking-widest transition-all flex justify-center items-center gap-2
-                                            ${hasPermission ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
+                                            ${hasPermission && !shouldBlockApprove ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
                                     >
                                         <span className="material-symbols-outlined">verified</span>
                                         Approve Release
@@ -411,10 +448,14 @@ export default function QCStationPage() {
                                     {!hasPermission && (
                                         <p className="text-xs text-error mt-2 text-center">Your role ({role}) cannot approve QC.</p>
                                     )}
+                                    {shouldBlockApprove && hasPermission && (
+                                        <p className="text-xs text-error mt-2 text-center">Approval blocked by policy. Use Recheck or Block.</p>
+                                    )}
                                     <p className="text-[10px] text-center text-outline mt-2">This decision will be recorded in the audit log.</p>
                                 </div>
                             </div>
-                        )}
+                            );
+                        })()}
                         
                         {selectedTask.status !== "Pending QC" && (
                             <div className="bg-surface-container-highest p-4 rounded-lg flex items-center justify-center gap-2">

@@ -18,29 +18,36 @@ interface Lot {
 const COLUMNS = [
     { id: "Pending QC", label: "Awaiting QC", color: "bg-outline", icon: "hourglass_top" },
     { id: "QC Released", label: "QC Released", color: "bg-secondary", icon: "verified" },
-    { id: "Awaiting Slot", label: "Ready for Warehouse", color: "bg-primary", icon: "warehouse" },
-    { id: "Blocked", label: "On Hold", color: "bg-error", icon: "block" },
+    { id: "Ready for Warehouse", label: "Ready for Warehouse", color: "bg-primary", icon: "warehouse" },
+    { id: "On Hold", label: "On Hold", color: "bg-amber-500", icon: "pause_circle" },
 ];
 
-// Valid transitions per source status
+// Valid transitions per source status (PPIC Planner)
 const VALID_TRANSITIONS: Record<string, string[]> = {
     "Pending QC": [], // Only QC Staff can release
-    "QC Released": ["Awaiting Slot", "Blocked"],
-    "Awaiting Slot": ["Blocked"],
-    "Blocked": ["QC Released"], // Can unblock back to QC Released if resolved
+    "QC Released": ["Ready for Warehouse", "On Hold"],
+    "Ready for Warehouse": ["On Hold"],
+    "On Hold": ["QC Released", "Ready for Warehouse"],
+    "Blocked": [], // Blocked lots cannot be moved via PPIC drag-and-drop
+    "Stored": [], // Already in warehouse
+    "Dispatched": [], // Already dispatched
 };
 
 const TRANSITION_REASONS: Record<string, string> = {
     "Pending QC→QC Released": "Status ini hanya bisa diperbarui oleh QC Staff setelah approval QC.",
-    "Pending QC→Awaiting Slot": "Material harus lolos QC terlebih dahulu sebelum bisa dijadwalkan.",
-    "Pending QC→Blocked": "Material harus lolos QC terlebih dahulu.",
-    "Awaiting Slot→QC Released": "Lot sudah melewati tahap QC Released.",
-    "Awaiting Slot→Pending QC": "Lot tidak bisa dikembalikan ke antrian QC.",
+    "Pending QC→Ready for Warehouse": "Material harus lolos QC terlebih dahulu sebelum bisa dijadwalkan.",
+    "Pending QC→On Hold": "Material harus lolos QC terlebih dahulu.",
+    "Blocked→QC Released": "Lot yang diblokir hanya bisa dibuka oleh Manager/Admin atau QC Staff melalui re-inspection.",
+    "Blocked→Ready for Warehouse": "Lot yang diblokir tidak boleh masuk ke antrian warehouse.",
+    "Blocked→On Hold": "Lot yang diblokir harus melalui unblock oleh Manager/Admin terlebih dahulu.",
+    "Ready for Warehouse→QC Released": "Lot sudah melewati tahap QC Released.",
+    "Stored→QC Released": "Lot sudah tersimpan di warehouse dan tidak bisa dikembalikan.",
+    "Stored→Ready for Warehouse": "Lot sudah tersimpan di warehouse.",
+    "Dispatched→QC Released": "Lot sudah dikirim.",
 };
 
 function getDisplayStatus(status: string): string {
-    if (status === "Stored") return "Awaiting Slot";
-    if (status === "Ready") return "Awaiting Slot";
+    if (status === "Awaiting Slot") return "Ready for Warehouse";
     return status;
 }
 
@@ -214,7 +221,9 @@ export default function PPICPage() {
                     <p className="font-bold">Drag-and-drop rules:</p>
                     <p>• <span className="font-bold">Awaiting QC → QC Released:</span> Only via QC Staff approval (cannot be dragged)</p>
                     <p>• <span className="font-bold">QC Released → Ready for Warehouse:</span> PPIC can move when lot is ready</p>
-                    <p>• <span className="font-bold">Any → On Hold:</span> PPIC can hold for scheduling/capacity reasons</p>
+                    <p>• <span className="font-bold">QC Released / Ready for Warehouse → On Hold:</span> PPIC can hold for scheduling/capacity reasons</p>
+                    <p>• <span className="font-bold">On Hold → QC Released / Ready for Warehouse:</span> PPIC can resume when ready</p>
+                    <p>• <span className="font-bold">Blocked:</span> Cannot be moved via drag-and-drop (requires Manager/Admin override)</p>
                     <p>• Every transition is validated and recorded in the audit log</p>
                 </div>
             </div>

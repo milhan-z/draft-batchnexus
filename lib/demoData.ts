@@ -7,7 +7,7 @@
 // fallback store reseeds automatically on next load.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 // Anchor the demo "today" to the submission date for consistent timestamps.
 const TODAY = "2026-05-31";
@@ -72,9 +72,10 @@ export const DEMO_LOTS = [
     { id: "LOT-2026-045", lot_number: "LOT-2026-045", source_receipt_id: "REC-2026-010", receipt_id: "REC-2026-010", material_id: "MAT-003", quantity: 25, status: "Stored", current_location: "COLD-B-01", released_at: t("15:00", "2026-05-30"), date_created: t("15:00", "2026-05-30") },
     { id: "LOT-2026-046", lot_number: "LOT-2026-046", source_receipt_id: "REC-2026-011", receipt_id: "REC-2026-011", material_id: "MAT-007", quantity: 45, status: "Dispatched", current_location: "HAZ-D-02", released_at: t("15:40", "2026-05-30"), date_created: t("15:40", "2026-05-30") },
     { id: "LOT-2026-047", lot_number: "LOT-2026-047", source_receipt_id: "REC-2026-012", receipt_id: "REC-2026-012", material_id: "MAT-002", quantity: 400, status: "Stored", current_location: "HAZ-D-03", released_at: t("16:30", "2026-05-30"), date_created: t("16:30", "2026-05-30") },
-    { id: "LOT-2026-049", lot_number: "LOT-2026-049", source_receipt_id: "REC-2026-004", receipt_id: "REC-2026-004", material_id: "MAT-003", quantity: 40, status: "Awaiting Slot", current_location: null, released_at: t("09:35"), date_created: t("09:35") },
-    { id: "LOT-2026-050", lot_number: "LOT-2026-050", source_receipt_id: "REC-2026-007", receipt_id: "REC-2026-007", material_id: "MAT-005", quantity: 6, status: "Awaiting Slot", current_location: null, released_at: t("11:45"), date_created: t("11:45") },
+    { id: "LOT-2026-049", lot_number: "LOT-2026-049", source_receipt_id: "REC-2026-004", receipt_id: "REC-2026-004", material_id: "MAT-003", quantity: 40, status: "QC Released", current_location: null, released_at: t("09:35"), date_created: t("09:35") },
+    { id: "LOT-2026-050", lot_number: "LOT-2026-050", source_receipt_id: "REC-2026-007", receipt_id: "REC-2026-007", material_id: "MAT-005", quantity: 6, status: "Ready for Warehouse", current_location: null, released_at: t("11:45"), date_created: t("11:45") },
     { id: "LOT-2026-051", lot_number: "LOT-2026-051", source_receipt_id: "REC-2026-002", receipt_id: "REC-2026-002", material_id: "MAT-001", quantity: 12, status: "Stored", current_location: "HAZ-D-04", released_at: t("10:45"), date_created: t("10:45") },
+    { id: "LOT-2026-052", lot_number: "LOT-2026-052", source_receipt_id: "REC-2026-003", receipt_id: "REC-2026-003", material_id: "MAT-004", quantity: 200, status: "On Hold", current_location: null, released_at: t("08:50"), date_created: t("08:50") },
 ];
 
 export const DEMO_PRODUCTION_ORDERS = [

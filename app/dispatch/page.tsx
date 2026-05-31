@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { fetchItems, createItem, updateItem } from "@/lib/api/client";
 import { notifications } from "@mantine/notifications";
-import { useRole, getActorName } from "@/lib/rbac";
+import { useRole, getActorName, canCreateDispatch } from "@/lib/rbac";
 
 interface Lot {
     id: string;
@@ -87,10 +87,31 @@ export default function DispatchPage() {
 
     const handleDispatch = async () => {
         if (!selectedLotId || !destination) return;
-        setDispatching(true);
-
         const lot = lots.find(l => l.id === selectedLotId);
         if (!lot) return;
+
+        // Quantity validation
+        const qty = Number(sampleQty);
+        if (qty > lot.quantity) {
+            notifications.show({
+                title: "Validation Error",
+                message: `Dispatch quantity (${qty}kg) exceeds available stock (${lot.quantity}kg).`,
+                color: "red",
+                autoClose: 5000,
+            });
+            return;
+        }
+        if (qty <= 0) {
+            notifications.show({
+                title: "Validation Error",
+                message: "Dispatch quantity must be greater than 0.",
+                color: "red",
+                autoClose: 5000,
+            });
+            return;
+        }
+
+        setDispatching(true);
 
         try {
             // 1. Create sample_dispatches record
@@ -179,7 +200,15 @@ export default function DispatchPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* LEFT: Dispatch Form */}
+                {/* LEFT: Dispatch Form or Read-Only Notice */}
+                {!canCreateDispatch(role) ? (
+                    <div className="lg:col-span-5 bg-white rounded-xl border border-outline-variant p-8 shadow-sm flex flex-col items-center justify-center text-center min-h-[300px]">
+                        <span className="material-symbols-outlined text-5xl text-amber-500 mb-4">visibility</span>
+                        <h3 className="font-bold text-lg mb-2">View-Only Mode</h3>
+                        <p className="text-sm text-on-surface-variant mb-4">Your role ({role}) does not have permission to create dispatches.</p>
+                        <p className="text-xs text-on-surface-variant bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg">Contact <strong>Operations Manager</strong> to create a new dispatch.</p>
+                    </div>
+                ) : (
                 <div className="lg:col-span-5 bg-white rounded-xl border border-outline-variant p-8 shadow-sm">
                     <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary">send</span>
@@ -274,7 +303,8 @@ export default function DispatchPage() {
                             )}
                         </button>
                     </div>
-                </div>
+                    </div>
+                )}
 
                 {/* RIGHT: Dispatch History */}
                 <div className="lg:col-span-7 bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
