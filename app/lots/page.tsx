@@ -55,7 +55,15 @@ export default function LotsTraceabilityPage() {
 
     const getMaterialName = (id: string) => materials.get(id)?.name || "Unknown";
     const getReceipt = (id: string) => receipts.get(id);
-    const getSupplierName = (recId: string) => suppliers.get(receipts.get(recId)?.supplier_id)?.name || "Unknown";
+    const getSupplierName = (recId: any) => {
+        if (!recId) return "Unknown";
+        const id = typeof recId === 'object' ? recId.id : recId;
+        const receipt = receipts.get(id);
+        if (!receipt) return "Unknown";
+        
+        const supId = typeof receipt.supplier_id === 'object' ? receipt.supplier_id.id : receipt.supplier_id;
+        return suppliers.get(supId)?.name || "Unknown";
+    };
 
     const filteredLots = lots.filter(l => 
         l.lot_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -146,7 +154,7 @@ export default function LotsTraceabilityPage() {
                                         <StatusBadge status={lot.status} />
                                     </div>
                                     <p className="font-bold text-sm line-clamp-1">{getMaterialName(lot.material_id)}</p>
-                                    <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mt-1">{getSupplierName(lot.source_receipt_id)}</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mt-1">{getSupplierName(lot.receipt_id || lot.source_receipt_id)}</p>
                                 </button>
                             ))
                         )}
@@ -177,10 +185,10 @@ export default function LotsTraceabilityPage() {
                                             const receipt = receipts.get(lot.source_receipt_id);
                                             const mat = materials.get(lot.material_id);
                                             const sup = receipt ? suppliers.get(receipt.supplier_id) : null;
-                                            const lotQc = qc.filter((q: any) => q.receipt_id === lot.source_receipt_id);
+                                            const lotQc = qc.filter((q: any) => q.receipt_id === (lot.receipt_id || lot.source_receipt_id));
                                             const lotDisp = dispatches.filter((d: any) => d.lot_id === lot.id);
                                             const lotAudits = audits.filter((a: any) =>
-                                                a.entity === lot.id || a.entity === lot.source_receipt_id ||
+                                                a.entity === lot.id || a.entity === (lot.receipt_id || lot.source_receipt_id) ||
                                                 (a.change_detail && a.change_detail.includes(lot.lot_number))
                                             );
 
@@ -189,7 +197,7 @@ export default function LotsTraceabilityPage() {
                                             csv += "LOT INFORMATION\n";
                                             csv += `Lot Number:,${lot.lot_number}\n`;
                                             csv += `Material:,${mat?.name || getMaterialName(lot.material_id)}\n`;
-                                            csv += `Supplier:,${sup?.name || getSupplierName(lot.source_receipt_id)}\n`;
+                                            csv += `Supplier:,${sup?.name || getSupplierName(lot.receipt_id || lot.source_receipt_id)}\n`;
                                             csv += `Quantity:,${lot.quantity}\n`;
                                             csv += `Status:,${lot.status}\n`;
                                             csv += `Location:,${lot.current_location || "N/A"}\n`;
@@ -264,7 +272,7 @@ export default function LotsTraceabilityPage() {
                                             <h4 className="font-bold text-sm border-b pb-2">Material Origin</h4>
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold opacity-70">Supplier</p>
-                                                <p className="font-bold text-sm">{getSupplierName(selectedLot.source_receipt_id)}</p>
+                                                <p className="font-bold text-sm">{getSupplierName(selectedLot.receipt_id || selectedLot.source_receipt_id)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold opacity-70">Source Receipt</p>
