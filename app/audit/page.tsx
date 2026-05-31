@@ -136,15 +136,27 @@ export default function AuditPage() {
             </div>
 
             {summary && (
-                <div className="bg-primary-container text-on-primary-container p-6 rounded-xl border border-primary/20 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-primary-container text-on-primary-container p-6 rounded-xl border border-primary/20 shadow-sm relative animate-in fade-in slide-in-from-top-4 duration-500 shrink-0">
                     <div className="flex items-center gap-2 mb-4">
                         <span className="material-symbols-outlined text-primary">summarize</span>
                         <h3 className="font-bold">Daily Operations Insight</h3>
                     </div>
-                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-lg font-mono text-sm leading-relaxed border border-primary/10">
-                        {summary.split('\n').map((line, i) => (
-                            <div key={i} className={line.startsWith('-') ? 'ml-4' : 'font-bold mb-2'}>{line}</div>
-                        ))}
+                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-lg font-mono text-sm leading-relaxed border border-primary/10 max-h-[250px] overflow-y-auto">
+                        {summary.split('\n').map((line, i) => {
+                            let formattedLine = line;
+                            formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-primary">$1</strong>');
+                            
+                            if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+                                return (
+                                    <div key={i} className="ml-4 flex gap-2 mb-2">
+                                        <span className="text-primary">•</span> 
+                                        <span dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s/, '') }} />
+                                    </div>
+                                );
+                            }
+                            if (line.trim() === '') return <div key={i} className="h-2"></div>;
+                            return <div key={i} className="mb-2" dangerouslySetInnerHTML={{ __html: formattedLine }} />;
+                        })}
                     </div>
                     <p className="text-[10px] uppercase tracking-widest mt-4 opacity-70">Generated from: inbound receipts, QC inspections, lots, temperature readings, warehouse moves, and dispatch records.</p>
                 </div>
