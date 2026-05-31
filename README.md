@@ -23,7 +23,8 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 
 | Dashboard & KPI | AI Inbound Intake |
 |:---:|:---:|
-| ![Dashboard](public/screenshots/dashboard.png) <br> *Real-time metrics and cold-chain monitoring* | ![Inbound](public/screenshots/inbound.png) <br> *AI Copilot auto-filling DO data* |
+| ![Dashboard](<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
+) <br> *Real-time metrics and cold-chain monitoring* | ![Inbound](public/screenshots/inbound.png) <br> *AI Copilot auto-filling DO data* |
 
 | Computer Vision QC | Smart Warehouse Slotting |
 |:---:|:---:|
