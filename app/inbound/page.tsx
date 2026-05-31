@@ -80,7 +80,24 @@ export default function InboundIntakePage() {
                     <p className="text-on-surface-variant mt-1">Raw material staging and pre-production status.</p>
                 </div>
                 <div className="flex space-x-3">
-                    <button className="border border-primary text-primary font-bold uppercase text-[10px] tracking-widest py-3 px-6 rounded-sm hover:bg-surface-container-low transition-colors">Export CSV</button>
+                    <button 
+                        onClick={() => {
+                            let csv = "Batch Reference,Material,Supplier,Quantity,Unit,Arrival Date,Hazard Class,Status\n";
+                            receipts.forEach((r: any) => {
+                                csv += `"${r.batch_reference}","${getMaterialName(r)}","${getSupplierCode(r)}","${r.quantity}","${r.unit}","${r.arrival_date}","${r.hazard_class}","${r.status}"\n`;
+                            });
+                            const blob = new Blob([csv], { type: "text/csv" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `inbound_intake_${new Date().toISOString().split('T')[0]}.csv`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }}
+                        className="border border-primary text-primary font-bold uppercase text-[10px] tracking-widest py-3 px-6 rounded-sm hover:bg-surface-container-low transition-colors"
+                    >
+                        Export CSV
+                    </button>
                     <button onClick={() => router.push("/inbound/new")} className="bg-primary text-on-primary font-bold uppercase text-[10px] tracking-widest py-3 px-6 rounded-sm hover:opacity-90 transition-opacity">New Intake</button>
                 </div>
             </div>
