@@ -147,5 +147,21 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
   - On-device Canvas computer-vision engine (`lib/visionQC.ts`) for color/defect analysis
 - **Resilience:** Graceful local Edge fallback (`lib/demoStore.ts`) ensuring 100% uptime even if the DaaS API goes down.
 
+---
 
+## 👥 User Roles & RBAC
+
+BatchNexus includes a comprehensive Role-Based Access Control (RBAC) system. Depending on the active role, the sidebar navigation, UI buttons, and data access will dynamically adapt. Switch roles from the login page or the topbar to test the permissions:
+
+| Persona | Role / Function | Permissions & Capabilities |
+|---|---|---|
+| 👨‍🔧 **Dimas Pratama** | **Receiving Operator** | Access to `Inbound Intake`. Can upload DOs, use AI extraction, and submit raw materials to the QC queue. Cannot approve QC. |
+| 👩‍🔬 **Rani Wulandari** | **QC Staff** | Access to `QC Station`. Can run Computer Vision analysis and release/block materials. Cannot move items in the warehouse. |
+| 👨‍💼 **Budi Hartono** | **PPIC Planner** | Access to `PPIC Board`. Can drag-and-drop released lots into the production schedule. |
+| 👷‍♂️ **Andi Saputra** | **Warehouse Admin** | Access to `Warehouse`. Responsible for assigning physical bins to lots using the digital twin interface. |
+| 👩‍💼 **Maya Santoso** | **Operations Manager** | Full access to all modules. The only role capable of creating dispatches, generating AI summaries, and exporting full Audit Logs. |
+| 👩‍💻 **Sari Putri** | **Customer Service** | Read-only access to `Lots` and `Dispatch`. Can use the Ops Copilot to check order status for clients but cannot modify data. |
+| 🛡️ **System Admin** | **Admin** | Superuser. Has unrestricted access to all features, bypasses, and configurations. |
+
+---
 © 2026 BatchNexus · Built for CyberHack 2026 · Sima Arôme Manufacturing Innovation Challenge
