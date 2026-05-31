@@ -17,48 +17,48 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots & Features Tour
 
 *(Hackathon Note: Please replace the placeholder images with actual screenshots of your application)*
 
 ### 1. Dashboard & KPI
-*Real-time metrics and cold-chain monitoring*
+*Provides a real-time executive overview of factory operations. Monitors active cold-chain alerts, tracks total pending items across all departments, and delivers AI-generated insights so managers can make data-driven decisions without digging through spreadsheets.*
 <img width="1920" alt="Dashboard" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
 
 ### 2. AI Inbound Intake
-*AI Copilot auto-filling DO data*
+*Eliminates manual data entry errors. Warehouse operators simply paste text or WhatsApp messages from suppliers, and our Groq (Llama 3.1) AI instantly extracts the material, supplier, quantity, and temperature requirements into a structured form.*
 ![Inbound](public/screenshots/inbound.png)
 
 ### 3. Computer Vision QC
-*On-device visual analysis for sample screening*
+*Revolutionizes quality control with an on-device AI vision engine. It analyzes sample photos pixel-by-pixel to calculate color deviation (ΔE) and detect dark-spot anomalies. It acts as a highly accurate screening assistant before final human sign-off.*
 ![QC Station](public/screenshots/qc.png)
 
 ### 4. PPIC Production Board
-*Drag-and-drop kanban for production readiness*
+*A visual drag-and-drop Kanban board that transforms production planning. PPIC managers can seamlessly move approved lots into staging, ensuring the production line is always fed with QC-cleared materials.*
 ![PPIC Board](public/screenshots/ppic.png)
 
 ### 5. Lot Traceability Timeline
-*Event-based history built from each lot's real linked records*
+*Solves the biggest compliance headache in manufacturing. Clicking any Lot reveals a visual, end-to-end provenance timeline—tracing exactly when it arrived, who approved the QC, where it was stored, and when it was dispatched.*
 ![Lots Traceability](public/screenshots/lots.png)
 
 ### 6. Smart Warehouse Slotting
-*Drag-and-drop hazard-aware slotting and cold-chain charts*
+*Prevents catastrophic storage errors. Features a visual digital twin of the warehouse with drag-and-drop assignment. The system actively enforces hazard segregation rules and cold-chain temperature limits, rejecting unsafe placements instantly.*
 ![Warehouse](public/screenshots/warehouse.png)
 
 ### 7. Dispatch & Fulfillment
-*Outbound sample processing and staging*
+*Streamlines outbound logistics. Allows operations to quickly pack and dispatch released lots or customer samples, updating inventory levels and generating a final audit trail of the material leaving the facility.*
 ![Dispatch](public/screenshots/dispatch.png)
 
 ### 8. Ops Copilot
-*Natural-language queries answered from operational records*
+*A 24/7 intelligent assistant for the factory floor. Instead of navigating menus, staff can ask natural language questions like "Where is Lot 2026-X stored?" and the Copilot instantly retrieves the exact answer from the live operational database.*
 ![Ops Copilot](public/screenshots/copilot.png)
 
 ### 9. AI Operations Summary
-*Manager-ready daily summary generated from live records*
+*Automates daily reporting. At the end of the shift, the AI analyzes all operational data, bottlenecks, and alerts to generate a professional "Daily Digest", replacing hours of manual reporting work for the plant manager.*
 ![AI Summary](public/screenshots/summary.png)
 
 ### 10. Immutable Audit Log
-*Ledger of actor, role, action, entity, and timestamp*
+*The ultimate compliance tool for ISO and FDA standards. Every single action taken in BatchNexus is permanently recorded with the actor's name, role, precise timestamp, and change details. No data can ever be silently altered.*
 ![Audit Log](public/screenshots/audit.png)
 
 ---
