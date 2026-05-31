@@ -154,7 +154,10 @@ export default function InboundNewPage() {
                 if (supMatch) supplier_id = supMatch.id;
             } catch {}
 
+            const recId = `REC-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
             const created = await createItem<any>("inbound_receipts", {
+                id: recId,
+                receipt_no: recId,
                 quantity: Number(form.quantity),
                 unit: form.unit,
                 batch_reference: form.batch_reference,
