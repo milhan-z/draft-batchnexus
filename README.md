@@ -166,7 +166,7 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
   - On-device Canvas computer-vision engine (`lib/visionQC.ts`) for color/defect analysis
 - **Resilience:** Graceful local Edge fallback (`lib/demoStore.ts`) ensuring 100% uptime even if the DaaS API goes down.
 
-### 🧠 System Architecture & Data Flow
+### System Architecture & Data Flow
 
 ```mermaid
 graph TD
@@ -202,15 +202,5 @@ BatchNexus includes a comprehensive Role-Based Access Control (RBAC) system. Dep
 | 👩‍💻 **Sari Putri** | **Customer Service** | Read-only access to `Lots` and `Dispatch`. Can use the Ops Copilot to check order status for clients but cannot modify data. |
 | 🛡️ **System Admin** | **Admin** | Superuser. Has unrestricted access to all features, bypasses, and configurations. |
 
----
 
-## 🏅 Team Members
-
-| Name | Role / Student ID | GitHub |
-|---|---|---|
-| **Your Name** | Team Leader | [@yourgithub](https://github.com/) |
-| **Member 2 Name** | Developer | [@member2](https://github.com/) |
-| **Member 3 Name** | UI/UX Designer | [@member3](https://github.com/) |
-
----
 © 2026 BatchNexus · Built for CyberHack 2026 · Sima Arôme Manufacturing Innovation Challenge
