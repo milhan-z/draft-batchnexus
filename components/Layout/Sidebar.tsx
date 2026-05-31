@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { fetchItems } from "@/lib/api/client";
 
 export const Sidebar = () => {
     const pathname = usePathname();
@@ -29,18 +30,18 @@ export const Sidebar = () => {
         setReportLoading(true);
         setReportText("");
         try {
+            const logsRes = await fetchItems<any>("audit_logs", { sort: "-timestamp", limit: 15 });
+            const recentLogs = logsRes.data.map(a => ({
+                time: a.timestamp,
+                actor: a.actor,
+                action: a.action,
+                detail: a.change_detail
+            }));
+
             const res = await fetch("/api/ai/summary", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    logs: [
-                        { action: "Inbound Receipt", material: "Clove Bud Oil", qty: "500 kg", supplier: "KTA Ponorogo", status: "Completed" },
-                        { action: "QC Inspection", lot: "LOT-2026-049", result: "Passed", score: 92 },
-                        { action: "QC Inspection", lot: "LOT-2026-050", result: "Failed - Odor Deviation", score: 58 },
-                        { action: "Warehouse Slotting", lot: "LOT-2026-049", bin: "HAZ-D-04", zone: "Flammable" },
-                        { action: "Inbound Receipt", material: "Lavender Absolute", qty: "200 L", supplier: "Java Citrus Farm", status: "Completed" },
-                    ]
-                }),
+                body: JSON.stringify({ logs: recentLogs }),
             });
             const data = await res.json();
             setReportText(data.text || "No summary available.");
@@ -108,7 +109,23 @@ export const Sidebar = () => {
                                     <p className="text-sm text-on-surface-variant font-bold uppercase tracking-widest">AI is analyzing operations...</p>
                                 </div>
                             ) : (
-                                <pre className="whitespace-pre-wrap text-sm text-on-surface leading-relaxed font-sans">{reportText}</pre>
+                                <div className="text-sm text-on-surface leading-relaxed font-sans space-y-2">
+                                    {reportText.split('\n').map((line, i) => {
+                                        let formattedLine = line;
+                                        formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-primary">$1</strong>');
+                                        
+                                        if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+                                            return (
+                                                <div key={i} className="ml-4 flex gap-2 mb-1">
+                                                    <span className="text-primary">•</span> 
+                                                    <span dangerouslySetInnerHTML={{ __html: formattedLine.replace(/^[-*]\s/, '') }} />
+                                                </div>
+                                            );
+                                        }
+                                        if (line.trim() === '') return <div key={i} className="h-1"></div>;
+                                        return <div key={i} dangerouslySetInnerHTML={{ __html: formattedLine }} />;
+                                    })}
+                                </div>
                             )}
                         </div>
                         <div className="px-6 py-3 border-t border-outline-variant bg-surface-container-low flex justify-end">
