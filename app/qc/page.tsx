@@ -241,11 +241,12 @@ export default function QCStationPage() {
             <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left: Queue */}
                 <div className="w-full lg:w-80 flex flex-col bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden h-[35vh] lg:h-auto">
-                    <div className="p-4 border-b border-outline-variant bg-surface-container flex items-center justify-between sticky top-0">
+                    <div className="p-4 border-b border-outline-variant bg-surface-container flex items-center justify-between shrink-0 z-10">
                         <h3 className="font-bold text-sm">Inspection Queue</h3>
                         <span className="bg-primary text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingTasks.filter(t => t.status === "Pending QC").length} Pending</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="flex-1 relative">
+                        <div className="absolute inset-0 overflow-y-auto p-4 space-y-3">
                         {loading ? (
                             <div className="flex justify-center p-8"><span className="material-symbols-outlined animate-spin text-primary">sync</span></div>
                         ) : pendingTasks.length === 0 ? (
@@ -269,6 +270,7 @@ export default function QCStationPage() {
                                 </button>
                             ))
                         )}
+                        </div>
                     </div>
                 </div>
 
