@@ -10,9 +10,9 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 
 
 ## Submission Links
-- **Live Demo Link:** [Insert AWS Amplify / BuildPad URL Here]
-- **Pitch Deck:** [Insert Link to Pitch Deck PDF]
-- **Demo Video:** [Insert YouTube/Vimeo Link]
+- **Live Demo Link:** [https://main.dix13trs8jql.amplifyapp.com/]
+- **Pitch Deck:** [https://drive.google.com/file/d/11fcIdT7om3cR-50LKPJ_t0gKqQpdLx5f/view?usp=drive_link]
+- **Demo Video:** [https://drive.google.com/file/d/1TTIkyxckptVJMiJfl1JBM6_qfTg5Xw-b/view?usp=drive_link]
 
 ## Screenshots & Features Tour
 
