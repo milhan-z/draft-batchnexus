@@ -153,6 +153,10 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
 
 BatchNexus includes a comprehensive Role-Based Access Control (RBAC) system. Depending on the active role, the sidebar navigation, UI buttons, and data access will dynamically adapt. Switch roles from the login page or the topbar to test the permissions:
 
+> [!NOTE]
+> **Login Page / Role Selector (Demo Mode)**
+> For the purpose of this hackathon, the `/login` page is designed as a passwordless "Role Selector". This allows judges to seamlessly switch between personas and explore different permission states without typing credentials. In a production environment, this page will be integrated with an Enterprise Authentication provider (e.g., Supabase Auth or BuildPad Auth) using encrypted passwords and Single Sign-On (SSO).
+
 | Persona | Role / Function | Permissions & Capabilities |
 |---|---|---|
 | 👨‍🔧 **Dimas Pratama** | **Receiving Operator** | Access to `Inbound Intake`. Can upload DOs, use AI extraction, and submit raw materials to the QC queue. Cannot approve QC. |
