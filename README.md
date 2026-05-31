@@ -2,7 +2,7 @@
 
 <img src="public/logo.png" alt="BatchNexus Logo" width="120" style="margin-bottom: 20px;" />
 
-# 🏭 BatchNexus Control Tower
+# BatchNexus Control Tower
 
 **One operational brain for intake, QC, lot tracking, warehouse, and dispatch.**<br>
 An AI-assisted manufacturing operations control tower built for **Sima Arôme**.
