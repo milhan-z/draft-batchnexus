@@ -7,7 +7,7 @@
 **One operational brain for intake, QC, lot tracking, warehouse, and dispatch.**<br>
 An AI-assisted manufacturing operations control tower built for **Sima Arôme**.
 
-🏆 **CyberHack 2026 — Sima Arôme Manufacturing Innovation Challenge** 🏆
+🏆 **CyberHack 2026 Sima Arôme Manufacturing Innovation Challenge** 🏆
 
 <br>
 
