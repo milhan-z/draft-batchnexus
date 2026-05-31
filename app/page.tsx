@@ -3,8 +3,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchItems } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useRole, ROLE_ACCESS } from "@/lib/rbac";
 
 export default function DashboardPage() {
+    const role = useRole();
     const [stats, setStats] = useState({ inbound: 0, pendingQc: 0, released: 0, warehouseAlerts: 0, samplesPending: 0 });
     const [recentLots, setRecentLots] = useState<any[]>([]);
     const [recentAudits, setRecentAudits] = useState<any[]>([]);
@@ -79,12 +81,16 @@ export default function DashboardPage() {
                     <p className="text-on-surface-variant mt-1">Real-time visibility from supplier intake to sample dispatch.</p>
                 </div>
                 <div className="flex gap-4 hidden md:flex">
-                    <Link href="/inbound/new" className="px-4 py-2 border border-outline-variant bg-white font-bold rounded-sm text-xs uppercase tracking-widest text-on-surface flex items-center gap-2 hover:border-primary hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-[16px]">receipt_long</span> New Intake
-                    </Link>
-                    <Link href="/qc" className="px-4 py-2 bg-primary text-on-primary font-bold rounded-sm text-xs uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <span className="material-symbols-outlined text-[16px]">biotech</span> QC Queue
-                    </Link>
+                    {ROLE_ACCESS[role]?.includes("/inbound/new") && (
+                        <Link href="/inbound/new" className="px-4 py-2 border border-outline-variant bg-white font-bold rounded-sm text-xs uppercase tracking-widest text-on-surface flex items-center gap-2 hover:border-primary hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-[16px]">receipt_long</span> New Intake
+                        </Link>
+                    )}
+                    {ROLE_ACCESS[role]?.includes("/qc") && (
+                        <Link href="/qc" className="px-4 py-2 bg-primary text-on-primary font-bold rounded-sm text-xs uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity">
+                            <span className="material-symbols-outlined text-[16px]">biotech</span> QC Queue
+                        </Link>
+                    )}
                 </div>
             </div>
 

@@ -23,6 +23,7 @@ export const StatusBadge = ({ status }: { status: string }) => {
             icon = "check_circle";
             break;
         case "Blocked":
+        case "BLOCKED":
         case "QC hold":
             colorClass = "bg-error-container text-on-error-container";
             icon = "block";
@@ -32,6 +33,7 @@ export const StatusBadge = ({ status }: { status: string }) => {
             icon = "pause_circle";
             break;
         case "Ready for Warehouse":
+        case "READY":
             colorClass = "bg-blue-100 text-blue-800";
             icon = "warehouse";
             break;
