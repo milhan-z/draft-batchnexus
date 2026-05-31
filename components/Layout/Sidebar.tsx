@@ -51,8 +51,7 @@ export const Sidebar = () => {
     return (
         <nav className="fixed left-0 top-0 h-screen flex flex-col py-6 w-64 z-40 bg-surface-container-low border-r border-outline-variant hidden md:flex">
             <div className="px-6 mb-8">
-                <h1 className="font-display font-bold text-2xl text-primary">Sima Arôme</h1>
-                <p className="text-sm text-on-surface-variant mt-1">BatchNexus Control</p>
+                <img src="/logo.png" alt="Sima Arome OPS Nexus" className="h-10 w-auto mb-2" />
             </div>
             <ul className="flex-1 flex flex-col space-y-1 overflow-y-auto hide-scrollbar">
                 {visibleGroups.map(group => (
