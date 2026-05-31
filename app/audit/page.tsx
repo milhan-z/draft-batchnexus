@@ -106,11 +106,11 @@ export default function AuditPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => {
-                            let csv = "Timestamp,Actor,Role,Action,Entity,Change Detail\n";
+                            let csv = "sep=,\nTimestamp,Actor,Role,Action,Entity,Change Detail\n";
                             filteredAudits.forEach((a: any) => {
                                 csv += `"${a.timestamp}","${a.actor}","${a.role}","${a.action}","${a.entity}","${a.change_detail}"\n`;
                             });
-                            const blob = new Blob([csv], { type: "text/csv" });
+                            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                             const url = URL.createObjectURL(blob);
                             const link = document.createElement("a");
                             link.href = url;

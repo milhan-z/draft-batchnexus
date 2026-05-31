@@ -82,11 +82,11 @@ export default function InboundIntakePage() {
                 <div className="flex space-x-3">
                     <button 
                         onClick={() => {
-                            let csv = "Batch Reference,Material,Supplier,Quantity,Unit,Arrival Date,Hazard Class,Status\n";
+                            let csv = "sep=,\nBatch Reference,Material,Supplier,Quantity,Unit,Arrival Date,Hazard Class,Status\n";
                             receipts.forEach((r: any) => {
                                 csv += `"${r.batch_reference}","${getMaterialName(r)}","${getSupplierCode(r)}","${r.quantity}","${r.unit}","${r.arrival_date}","${r.hazard_class}","${r.status}"\n`;
                             });
-                            const blob = new Blob([csv], { type: "text/csv" });
+                            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
