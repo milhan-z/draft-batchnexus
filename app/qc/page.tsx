@@ -104,6 +104,7 @@ export default function QCStationPage() {
             // 2. Create QC Inspection Record (canonical schema — matches seed & Lots display)
             const lotNo = `LOT-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
             await createItem("qc_inspections", {
+                id: `QC-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
                 receipt_id: selectedTask.id,
                 colour_score: colorScore,
                 defect_risk: defectRisk,
@@ -118,6 +119,7 @@ export default function QCStationPage() {
 
             // 3. Create Lot Record with source_receipt_id for traceability
             await createItem("lots", {
+                id: lotNo,
                 lot_number: lotNo,
                 receipt_id: selectedTask.id,
                 source_receipt_id: selectedTask.id,
