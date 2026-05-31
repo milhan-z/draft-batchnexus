@@ -53,18 +53,31 @@ export default function AuditPage() {
 
     const handleGenerateSummary = async () => {
         setSummaryLoading(true);
-        // Simulate AI generation time
-        await new Promise(r => setTimeout(r, 1500));
-        
-        const demoSummary = `Today's Operations Summary:
-- 8 inbound receipts registered.
-- 3 materials are pending QC.
-- 5 lots have been released.
-- 1 lot is blocked due to QC review.
-- 1 cold-chain alert was detected in FRZ-C.
-- LOT-2026-051 should be prioritized for dispatch.`;
-        
-        setSummary(demoSummary);
+        try {
+            // Send the most recent 15 logs to avoid context limit
+            const recentLogs = filteredAudits.slice(0, 15).map(a => ({
+                time: a.timestamp,
+                actor: a.actor,
+                action: a.action,
+                detail: a.change_detail
+            }));
+
+            const res = await fetch("/api/ai/summary", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ logs: recentLogs })
+            });
+            const data = await res.json();
+            
+            if (data.text) {
+                setSummary(data.text);
+            } else {
+                setSummary("Failed to generate summary.");
+            }
+        } catch (err) {
+            console.error(err);
+            setSummary("Error connecting to AI service.");
+        }
         
         try {
             await createItem("audit_logs", {
