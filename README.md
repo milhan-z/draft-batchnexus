@@ -76,7 +76,7 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8e1a3c93-6808-4c1f-bdc6-3120fd8c6e8f" />
 
 
-## 🚀 The Problem vs The Solution
+## The Problem vs The Solution
 
 ### The Problem: Operational Blind Spots & Manual Bottlenecks
 Sima Arôme produces premium natural extracts where precision is non-negotiable. Yet, daily operations suffer from critical inefficiencies:
@@ -93,7 +93,7 @@ BatchNexus transforms fragmented manual workflows into a **single, intelligent, 
 - **Effortless Traceability:** Every single action is immutably recorded in the Audit Log, offering 1-click end-to-end provenance tracing that makes compliance audits instantaneous.
 
 
-## 💻 Installation Steps
+## Installation Steps
 
 Requires **Node.js 18.17+** and **pnpm**.
 
@@ -124,9 +124,8 @@ Requires **Node.js 18.17+** and **pnpm**.
    ```
    Open `http://localhost:3000` in your browser.
 
----
 
-## 📖 Usage Instructions (The Golden Demo Flow)
+## Usage Instructions 
 
 To fully experience the BatchNexus capabilities, follow this operational workflow:
 
@@ -138,9 +137,8 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
 6. **Ops Copilot:** Use the chat icon to query the operational database in natural language (e.g., *"Where is Lot 2026-X stored?"*).
 7. **Audit Log:** Finally, navigate to `Governance -> Audit Log` to verify that every action taken above was immutably recorded.
 
----
 
-## ⚙️ Tech Stack & Architecture
+## Tech Stack & Architecture
 
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
 - **Backend:** BuildPad DaaS (Data-as-a-Service) / PostgreSQL
@@ -149,5 +147,5 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
   - On-device Canvas computer-vision engine (`lib/visionQC.ts`) for color/defect analysis
 - **Resilience:** Graceful local Edge fallback (`lib/demoStore.ts`) ensuring 100% uptime even if the DaaS API goes down.
 
----
+
 © 2026 BatchNexus · Built for CyberHack 2026 · Sima Arôme Manufacturing Innovation Challenge
