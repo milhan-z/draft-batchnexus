@@ -1,15 +1,22 @@
 // Fallback Data Layer for Hackathon Demo
-import { INITIAL_DB } from "./demoData";
+import { INITIAL_DB, SEED_VERSION } from "./demoData";
 
 const STORAGE_KEY = "batchnexus_demo_db";
+const VERSION_KEY = "batchnexus_seed_version";
 
 export function getDemoDB() {
     if (typeof window === "undefined") return INITIAL_DB;
+
+    // Reseed automatically when the bundled demo data version changes so the
+    // local fallback store never serves stale/empty data after an update.
+    const storedVersion = Number(localStorage.getItem(VERSION_KEY) || "0");
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-    
-    // Initialize if not present
+    if (stored && storedVersion === SEED_VERSION) {
+        return JSON.parse(stored);
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DB));
+    localStorage.setItem(VERSION_KEY, String(SEED_VERSION));
     return INITIAL_DB;
 }
 
@@ -21,6 +28,7 @@ export function saveDemoDB(db: any) {
 export function resetDemoDB() {
     if (typeof window === "undefined") return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DB));
+    localStorage.setItem(VERSION_KEY, String(SEED_VERSION));
 }
 
 export function fallbackFetch(collection: string, options?: any) {

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchItems, createItem } from "@/lib/api/client";
-import { useRole, canGenerateSummary } from "@/lib/rbac";
+import { useRole, canGenerateSummary, getActorName, canViewAudit } from "@/lib/rbac";
 
 export default function AuditPage() {
     const { role } = useRole();
@@ -53,38 +53,52 @@ export default function AuditPage() {
 
     const handleGenerateSummary = async () => {
         setSummaryLoading(true);
-        // Simulate AI generation time
-        await new Promise(r => setTimeout(r, 1500));
-        
-        const demoSummary = `Today's Operations Summary:
-- 8 inbound receipts registered.
-- 3 materials are pending QC.
-- 5 lots have been released.
-- 1 lot is blocked due to QC review.
-- 1 cold-chain alert was detected in FRZ-C.
-- LOT-2026-051 should be prioritized for dispatch.`;
-        
-        setSummary(demoSummary);
-        
+        // Build the summary from live operational records (not a hardcoded string).
         try {
+            const [receipts, lots, zones] = await Promise.all([
+                fetchItems<any>("inbound_receipts", { limit: 200 }),
+                fetchItems<any>("lots", { limit: 200 }),
+                fetchItems<any>("warehouse_zones", {}),
+            ]);
+            await new Promise(r => setTimeout(r, 1200));
+
+            const inboundCount = receipts.data.length;
+            const pendingQc = receipts.data.filter((r: any) => r.status === "Pending QC").length;
+            const released = lots.data.filter((l: any) => ["QC Released", "Awaiting Slot", "Stored", "Dispatched"].includes(l.status)).length;
+            const blocked = receipts.data.filter((r: any) => r.status === "Blocked").length + lots.data.filter((l: any) => l.status === "Blocked").length;
+            const coldAlerts = zones.data.filter((z: any) => z.status === "Cold-chain Alert");
+            const priority = lots.data.find((l: any) => l.status === "Stored") || lots.data[0];
+
+            const generated = `Today's Operations Summary:
+- ${inboundCount} inbound receipts registered.
+- ${pendingQc} materials are pending QC.
+- ${released} lots have been released.
+- ${blocked} lot(s) blocked pending review.
+- ${coldAlerts.length} cold-chain alert(s)${coldAlerts[0] ? ` in ${coldAlerts[0].id}` : ""}.
+- ${priority?.lot_number || "—"} should be prioritized for dispatch.`;
+
+            setSummary(generated);
+
             await createItem("audit_logs", {
                 timestamp: new Date().toISOString(),
-                actor: "Current User",
+                actor: getActorName(role),
                 role: role,
                 action: "Generated AI Operations summary",
                 entity: "Report",
-                change_detail: "Operations summary generated."
+                change_detail: "Operations summary generated from operational records."
             });
             await loadData();
-        } catch (e) {}
-        
-        setSummaryLoading(false);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSummaryLoading(false);
+        }
     };
 
     const hasPermission = canGenerateSummary(role);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] gap-6">
+        <div className="flex flex-col h-[calc(100vh-9rem)] gap-6">
             <div className="flex justify-between items-end">
                 <div>
                     <h2 className="font-display font-bold text-3xl text-primary">Audit Log & Reports</h2>

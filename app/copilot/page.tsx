@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createItem } from "@/lib/api/client";
-import { useRole } from "@/lib/rbac";
+import { useRole, getActorName } from "@/lib/rbac";
 import { getDemoDB } from "@/lib/demoStore";
 
 interface SourceRecord {
@@ -21,43 +21,29 @@ function searchDemoDB(query: string): { content: string; sources: SourceRecord[]
     const q = query.toLowerCase();
     const db = getDemoDB();
 
-    // LOT queries
-    if (q.includes("lot-2026-051") || (q.includes("lot") && q.includes("051"))) {
-        const lot = db.lots?.find((l: any) => l.lot_number === "LOT-2026-051") || db.lots?.[0];
+    const matName = (id: string) => db.materials?.find((m: any) => m.id === id)?.name || "material";
+    const lotByNumber = (num: string) => db.lots?.find((l: any) => l.lot_number?.toLowerCase() === num.toLowerCase());
+
+    // Direct lot-number lookup for any LOT-XXXX referenced in the query.
+    const lotMatch = q.match(/lot[- ]?2026[- ]?(\d{2,4})/i);
+    if (lotMatch) {
+        const lotNum = `LOT-2026-${lotMatch[1].padStart(3, "0")}`;
+        const lot = lotByNumber(lotNum) || db.lots?.find((l: any) => l.lot_number?.includes(lotMatch[1]));
         if (lot) {
+            const linkedDisp = (db.sample_dispatches || []).filter((d: any) => d.lot_id === lot.id);
+            const dispText = linkedDisp.length
+                ? ` It is linked to ${linkedDisp.length} dispatch record(s): ${linkedDisp.map((d: any) => d.customer_name).join(", ")}.`
+                : " No dispatch records are linked yet.";
             return {
-                content: `${lot.lot_number} is currently in status "${lot.status}"${lot.current_location ? ` at location ${lot.current_location}` : ""}. It contains ${db.materials?.find((m: any) => m.id === lot.material_id)?.name || "material"} from ${db.suppliers?.[0]?.name || "supplier"}. QC was released on 28 May 2026 and ${db.sample_dispatches?.filter((d: any) => d.lot_id === lot.id).length || 0} sample dispatch records are linked.`,
+                content: `${lot.lot_number} (${matName(lot.material_id)}) is currently "${lot.status}"${lot.current_location ? ` at ${lot.current_location}` : ""}.${dispText}`,
                 sources: [
                     { type: "Lot record", id: lot.lot_number, desc: `Status: ${lot.status}` },
-                    ...(lot.current_location ? [{ type: "Warehouse move", id: "MOVE-2026-001", desc: `Location: ${lot.current_location}` }] : []),
-                    { type: "QC inspection", id: "QC-2026-002", desc: "Approved release" },
-                ]
+                    ...(lot.current_location ? [{ type: "Warehouse", id: lot.current_location, desc: "Storage bin" }] : []),
+                    ...linkedDisp.map((d: any) => ({ type: "Dispatch", id: d.id, desc: d.customer_name })),
+                ],
             };
         }
-    }
-
-    // Where is [LOT-XXX] queries
-    if (q.includes("where") || q.includes("dimana") || q.includes("lokasi")) {
-        const lotMatch = q.match(/lot[- ]?2026[- ]?(\d+)/i);
-        if (lotMatch) {
-            const lotNum = `LOT-2026-${lotMatch[1]}`;
-            const lot = db.lots?.find((l: any) => l.lot_number === lotNum);
-            if (lot) {
-                return {
-                    content: `${lot.lot_number} is in status "${lot.status}"${lot.current_location ? ` at ${lot.current_location}` : ". No warehouse slot assigned yet"}.`,
-                    sources: [{ type: "Lot record", id: lot.lot_number, desc: `Status: ${lot.status}` }]
-                };
-            }
-        }
-        // Check for any lot reference
-        for (const lot of (db.lots || [])) {
-            if (q.includes(lot.lot_number?.toLowerCase())) {
-                return {
-                    content: `${lot.lot_number} is in status "${lot.status}"${lot.current_location ? ` at ${lot.current_location}` : ""}.`,
-                    sources: [{ type: "Lot record", id: lot.lot_number, desc: `Status: ${lot.status}` }]
-                };
-            }
-        }
+        return { content: `I could not find ${lotNum} in the operational records.`, sources: [] };
     }
 
     // Sample/dispatch queries
@@ -74,15 +60,18 @@ function searchDemoDB(query: string): { content: string; sources: SourceRecord[]
     }
 
     // Blocked queries
-    if (q.includes("blocked") || q.includes("blok") || q.includes("ditolak")) {
-        const blocked = (db.lots || []).filter((l: any) => l.status === "Blocked");
-        const holdQC = (db.warehouse_zones || []).filter((z: any) => z.status === "QC hold");
+    if (q.includes("blocked") || q.includes("blok") || q.includes("ditolak") || q.includes("rejected")) {
+        const blockedLots = (db.lots || []).filter((l: any) => l.status === "Blocked");
+        const blockedReceipts = (db.inbound_receipts || []).filter((r: any) => r.status === "Blocked");
+        const needsReview = (db.inbound_receipts || []).filter((r: any) => r.status === "Needs Review");
+        const total = blockedLots.length + blockedReceipts.length;
         return {
-            content: `There are ${blocked.length} blocked lots and ${holdQC.length} zone(s) under quarantine (QC hold).`,
+            content: `There ${total === 1 ? "is" : "are"} ${total} blocked item(s) and ${needsReview.length} awaiting recheck (Needs Review). ${blockedReceipts.map((r: any) => `${r.receipt_no} (${matName(r.material_id)})`).join(", ") || "No blocked receipts."}`,
             sources: [
-                ...blocked.map((l: any) => ({ type: "Lot", id: l.lot_number, desc: "Blocked" })),
-                ...holdQC.map((z: any) => ({ type: "Zone", id: z.id, desc: z.name }))
-            ]
+                ...blockedReceipts.map((r: any) => ({ type: "Receipt", id: r.receipt_no, desc: "Blocked" })),
+                ...blockedLots.map((l: any) => ({ type: "Lot", id: l.lot_number, desc: "Blocked" })),
+                ...needsReview.map((r: any) => ({ type: "Receipt", id: r.receipt_no, desc: "Needs Review" })),
+            ],
         };
     }
 
@@ -160,6 +149,33 @@ function searchDemoDB(query: string): { content: string; sources: SourceRecord[]
         };
     }
 
+    // Dispatch priority / what to ship next
+    if (q.includes("priorit") || q.includes("ship next") || q.includes("dispatch next") || q.includes("prioritas")) {
+        const stored = (db.lots || []).filter((l: any) => l.status === "Stored");
+        const target = stored[0] || (db.lots || [])[0];
+        if (target) {
+            return {
+                content: `${target.lot_number} should be prioritized for dispatch. It is ${target.status}${target.current_location ? ` at ${target.current_location}` : ""} and is linked to export demand (AromaWell Singapore).`,
+                sources: [
+                    { type: "Lot record", id: target.lot_number, desc: `Status: ${target.status}` },
+                    { type: "Dispatch", id: "DSP-001", desc: "Export — Singapore" },
+                ]
+            };
+        }
+    }
+
+    // Stored lots / inventory on hand
+    if (q.includes("stored") || q.includes("disimpan") || q.includes("in stock") || q.includes("inventory") || q.includes("stok")) {
+        const stored = (db.lots || []).filter((l: any) => l.status === "Stored");
+        if (stored.length > 0) {
+            return {
+                content: `There are ${stored.length} stored lot(s): ${stored.map((l: any) => `${l.lot_number} at ${l.current_location || "unassigned"}`).join(", ")}.`,
+                sources: stored.map((l: any) => ({ type: "Lot record", id: l.lot_number, desc: l.current_location || "Stored" }))
+            };
+        }
+        return { content: "No lots are currently in Stored status.", sources: [] };
+    }
+
     // General status / summary
     if (q.includes("status") || q.includes("summary") || q.includes("ringkasan") || q.includes("today") || q.includes("hari ini")) {
         const lots = db.lots || [];
@@ -209,7 +225,7 @@ export default function CopilotPage() {
         try {
             await createItem("audit_logs", {
                 timestamp: new Date().toISOString(),
-                actor: "Current User",
+                actor: getActorName(role),
                 role: role,
                 action: "Queried Ops Copilot",
                 entity: "Copilot",
@@ -231,7 +247,7 @@ export default function CopilotPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto w-full">
+        <div className="flex flex-col h-[calc(100vh-9rem)] max-w-4xl mx-auto w-full">
             <div className="mb-6">
                 <h2 className="font-display font-bold text-3xl text-primary">Ops Copilot</h2>
                 <p className="text-on-surface-variant mt-1">AI-assisted natural language queries for manufacturing operations.</p>

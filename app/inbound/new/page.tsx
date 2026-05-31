@@ -1,337 +1,434 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchItems, createItem } from "@/lib/api/client";
-import { useRole, canSubmitToQC } from "@/lib/rbac";
+import { useRole, canSubmitToQC, getActorName } from "@/lib/rbac";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { notifications } from "@mantine/notifications";
 
 export default function InboundNewPage() {
     const router = useRouter();
     const { role } = useRole();
-    const [textInput, setTextInput] = useState("");
-    const [extracting, setExtracting] = useState(false);
-    const [extractedData, setExtractedData] = useState<any | null>(null);
-    const [submitting, setSubmitting] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
+    const hasPermission = canSubmitToQC(role);
 
-    // Validation state for material/supplier lookup
+    // Form fields
+    const [form, setForm] = useState({
+        supplier_name: "",
+        material_name: "",
+        quantity: "",
+        unit: "kg",
+        batch_reference: "",
+        arrival_date: new Date().toISOString().split("T")[0],
+        temperature_requirement: "Ambient",
+        hazard_class: "Normal",
+    });
+
+    // AI assist
+    const [aiText, setAiText] = useState("");
+    const [showAiPanel, setShowAiPanel] = useState(false);
+    const [extracting, setExtracting] = useState(false);
+    const [aiResult, setAiResult] = useState<any>(null);
+    const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+
+    // Validation
     const [validation, setValidation] = useState<{
         materialFound: boolean | null;
         supplierFound: boolean | null;
         materialMatch: string | null;
         supplierMatch: string | null;
-        checking: boolean;
-    }>({ materialFound: null, supplierFound: null, materialMatch: null, supplierMatch: null, checking: false });
+    }>({ materialFound: null, supplierFound: null, materialMatch: null, supplierMatch: null });
+    const [validating, setValidating] = useState(false);
 
-    // Validate extracted data against DaaS master data
-    const validateAgainstDaaS = async (extracted: any) => {
-        setValidation(prev => ({ ...prev, checking: true }));
-        try {
-            const [materialsRes, suppliersRes] = await Promise.all([
-                fetchItems<any>("materials"),
-                fetchItems<any>("suppliers"),
-            ]);
+    // Submit
+    const [submitting, setSubmitting] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
-            let materialFound = false;
-            let supplierFound = false;
-            let materialMatch: string | null = null;
-            let supplierMatch: string | null = null;
-
-            if (extracted.material_name && materialsRes.data) {
-                const matName = extracted.material_name.toLowerCase();
-                const match = materialsRes.data.find((m: any) =>
-                    m.name?.toLowerCase().includes(matName) || matName.includes(m.name?.toLowerCase())
-                );
-                materialFound = !!match;
-                materialMatch = match?.name || null;
-            }
-
-            if (extracted.supplier_name && suppliersRes.data) {
-                const supName = extracted.supplier_name.toLowerCase();
-                const match = suppliersRes.data.find((s: any) =>
-                    s.name?.toLowerCase().includes(supName) || supName.includes(s.name?.toLowerCase())
-                );
-                supplierFound = !!match;
-                supplierMatch = match?.name || null;
-            }
-
-            setValidation({ materialFound, supplierFound, materialMatch, supplierMatch, checking: false });
-        } catch (err) {
-            console.warn("Validation lookup failed:", err);
-            setValidation({ materialFound: null, supplierFound: null, materialMatch: null, supplierMatch: null, checking: false });
-        }
+    const updateField = (field: string, value: string) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
     };
 
-    const handleExtract = async () => {
-        if (!textInput) return;
+    // ── AI Extraction ──────────────────────────────────────
+    const handleAiExtract = async () => {
+        if (!aiText.trim()) return;
         setExtracting(true);
-        setExtractedData(null);
-        setValidation({ materialFound: null, supplierFound: null, materialMatch: null, supplierMatch: null, checking: false });
+        setAiResult(null);
         try {
             const res = await fetch("/api/ai/extract-manifest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: textInput })
+                body: JSON.stringify({ text: aiText }),
             });
             const data = await res.json();
             if (data.data) {
-                setExtractedData(data.data);
-                // Immediately validate against DaaS
-                validateAgainstDaaS(data.data);
+                setAiResult(data.data);
+                setAiConfidence(data.data.confidence || 80);
             }
-        } catch (error) {
-            console.error("Extraction error", error);
+        } catch (err) {
+            console.error("AI extraction failed", err);
+            notifications.show({ title: "Extraction Failed", message: "Could not extract data. Please fill manually.", color: "red" });
         } finally {
             setExtracting(false);
         }
     };
 
-    const handleFieldChange = (field: string, value: any) => {
-        setExtractedData((prev: any) => ({ ...prev, [field]: value }));
+    const handleApplyAi = () => {
+        if (!aiResult) return;
+        setForm({
+            supplier_name: aiResult.supplier_name || "",
+            material_name: aiResult.material_name || "",
+            quantity: String(aiResult.quantity || ""),
+            unit: aiResult.unit || "kg",
+            batch_reference: aiResult.batch_reference || "",
+            arrival_date: aiResult.arrival_date || new Date().toISOString().split("T")[0],
+            temperature_requirement: aiResult.temperature_requirement || "Ambient",
+            hazard_class: aiResult.hazard_class || "Normal",
+        });
+        setShowAiPanel(false);
+        setAiResult(null);
+        setAiText("");
+        notifications.show({ title: "AI Applied ✓", message: "Fields filled from AI extraction. Please review before submitting.", color: "green", autoClose: 4000 });
+        // Trigger validation
+        validateMasterData(aiResult.material_name, aiResult.supplier_name);
     };
 
+    // ── Validation against master data ─────────────────────
+    const validateMasterData = async (matName?: string, supName?: string) => {
+        const material = matName || form.material_name;
+        const supplier = supName || form.supplier_name;
+        if (!material && !supplier) return;
+        setValidating(true);
+        try {
+            const [matRes, supRes] = await Promise.all([
+                fetchItems<any>("materials"),
+                fetchItems<any>("suppliers"),
+            ]);
+            let materialFound = false, supplierFound = false;
+            let materialMatch: string | null = null, supplierMatch: string | null = null;
+
+            if (material && matRes.data) {
+                const m = material.toLowerCase();
+                const match = matRes.data.find((x: any) => x.name?.toLowerCase().includes(m) || m.includes(x.name?.toLowerCase()));
+                materialFound = !!match;
+                materialMatch = match?.name || null;
+            }
+            if (supplier && supRes.data) {
+                const s = supplier.toLowerCase();
+                const match = supRes.data.find((x: any) => x.name?.toLowerCase().includes(s) || s.includes(x.name?.toLowerCase()));
+                supplierFound = !!match;
+                supplierMatch = match?.name || null;
+            }
+            setValidation({ materialFound, supplierFound, materialMatch, supplierMatch });
+        } catch {
+            setValidation({ materialFound: null, supplierFound: null, materialMatch: null, supplierMatch: null });
+        } finally {
+            setValidating(false);
+        }
+    };
+
+    // ── Form validation ────────────────────────────────────
+    const validate = (): boolean => {
+        const e: Record<string, string> = {};
+        if (!form.supplier_name.trim()) e.supplier_name = "Supplier is required";
+        if (!form.material_name.trim()) e.material_name = "Material is required";
+        if (!form.quantity || Number(form.quantity) <= 0) e.quantity = "Valid quantity is required";
+        if (!form.unit.trim()) e.unit = "Unit is required";
+        if (!form.batch_reference.trim()) e.batch_reference = "Batch reference is required";
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    // ── Submit ─────────────────────────────────────────────
     const handleSubmit = async () => {
-        if (!extractedData) return;
+        if (!validate()) return;
         setSubmitting(true);
         try {
-            // Lookup material_id and supplier_id from DaaS reference tables
             let material_id: string | null = null;
             let supplier_id: string | null = null;
-
             try {
-                const [materialsRes, suppliersRes] = await Promise.all([
-                    fetchItems<any>("materials"),
-                    fetchItems<any>("suppliers"),
-                ]);
+                const [matRes, supRes] = await Promise.all([fetchItems<any>("materials"), fetchItems<any>("suppliers")]);
+                const matMatch = matRes.data.find((m: any) => m.name?.toLowerCase().includes(form.material_name.toLowerCase()) || form.material_name.toLowerCase().includes(m.name?.toLowerCase()));
+                const supMatch = supRes.data.find((s: any) => s.name?.toLowerCase().includes(form.supplier_name.toLowerCase()) || form.supplier_name.toLowerCase().includes(s.name?.toLowerCase()));
+                if (matMatch) material_id = matMatch.id;
+                if (supMatch) supplier_id = supMatch.id;
+            } catch {}
 
-                // Fuzzy match material name
-                if (extractedData.material_name && materialsRes.data) {
-                    const matName = extractedData.material_name.toLowerCase();
-                    const match = materialsRes.data.find((m: any) => 
-                        m.name?.toLowerCase().includes(matName) || matName.includes(m.name?.toLowerCase())
-                    );
-                    if (match) material_id = match.id;
-                }
-
-                // Fuzzy match supplier name
-                if (extractedData.supplier_name && suppliersRes.data) {
-                    const supName = extractedData.supplier_name.toLowerCase();
-                    const match = suppliersRes.data.find((s: any) => 
-                        s.name?.toLowerCase().includes(supName) || supName.includes(s.name?.toLowerCase())
-                    );
-                    if (match) supplier_id = match.id;
-                }
-            } catch (lookupErr) {
-                console.warn("Lookup failed, submitting without relations:", lookupErr);
-            }
-
-            await createItem("inbound_receipts", {
-                quantity: Number(extractedData.quantity),
-                unit: extractedData.unit,
-                batch_reference: extractedData.batch_reference,
-                temperature_requirement: extractedData.temperature_requirement,
-                hazard_class: extractedData.hazard_class,
+            const created = await createItem<any>("inbound_receipts", {
+                quantity: Number(form.quantity),
+                unit: form.unit,
+                batch_reference: form.batch_reference,
+                temperature_requirement: form.temperature_requirement,
+                hazard_class: form.hazard_class,
                 status: "Pending QC",
-                arrival_date: extractedData.arrival_date || new Date().toISOString().split('T')[0],
+                arrival_date: form.arrival_date,
                 ...(material_id && { material_id }),
                 ...(supplier_id && { supplier_id }),
             });
 
-            // Audit log is tracked automatically by DaaS Activity
+            const actor = getActorName(role);
+            const entityRef = created?.data?.id || form.batch_reference;
+            const source = aiConfidence ? "AI-Assisted" : "Manual Entry";
+            await createItem("audit_logs", {
+                timestamp: new Date().toISOString(),
+                actor,
+                role,
+                action: "Created inbound receipt",
+                entity: entityRef,
+                change_detail: `${form.quantity} ${form.unit} of ${form.material_name} from ${form.supplier_name}. Source: ${source}. Status: → Pending QC.`,
+            });
 
+            notifications.show({ title: "Receipt Created ✓", message: `${form.batch_reference} submitted to QC queue.`, color: "green", autoClose: 5000 });
             setShowConfirm(false);
             router.push("/inbound");
         } catch (err) {
             console.error("Submit failed", err);
+            notifications.show({ title: "Submit Failed", message: "Could not create receipt. Please try again.", color: "red" });
         } finally {
             setSubmitting(false);
         }
     };
 
-    const hasPermission = canSubmitToQC(role);
-
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-w-4xl">
             <div>
-                <h2 className="font-display font-bold text-3xl text-primary">AI Inbound Intake</h2>
-                <p className="text-on-surface-variant mt-1">Paste delivery manifest text. AI will extract key data instantly.</p>
+                <h2 className="font-display font-bold text-3xl text-primary">New Inbound Receipt</h2>
+                <p className="text-on-surface-variant mt-1">Register incoming raw materials. Use AI to auto-fill or enter manually.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left: Input */}
-                <div className="flex flex-col gap-6">
-                    <div className="bg-white border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col shadow-sm focus-within:border-primary transition-colors">
-                        <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary">description</span>
-                            Raw Manifest Text
-                        </h3>
-                        <p className="text-sm text-on-surface-variant mb-4">Paste the supplier WhatsApp message or email text here. Supports Indonesian and English.</p>
-
-                        <textarea
-                            className="flex-1 min-h-[200px] bg-surface-container-lowest border border-outline-variant rounded-lg resize-none focus:ring-1 focus:ring-primary p-4 text-sm font-mono text-on-surface"
-                            placeholder={"Contoh:\n• tolong catat 400kg cengkeh dari madura\n• Supplier: Java Citrus Farm, Material: Citrus Peel Extract, Quantity: 12 drums\n• 200L lavender oil from Bali Essential Co."}
-                            value={textInput}
-                            onChange={(e) => setTextInput(e.target.value)}
-                        ></textarea>
+            {/* AI Assist Panel */}
+            <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+                <button
+                    onClick={() => setShowAiPanel(!showAiPanel)}
+                    className="w-full p-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors text-left"
+                >
+                    <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-secondary">auto_awesome</span>
                     </div>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-sm">AI Auto-Fill</h3>
+                        <p className="text-xs text-on-surface-variant">Paste supplier text/WhatsApp and let AI fill the form for you</p>
+                    </div>
+                    <span className={`material-symbols-outlined text-on-surface-variant transition-transform ${showAiPanel ? "rotate-180" : ""}`}>expand_more</span>
+                </button>
 
-                    <button
-                        onClick={handleExtract}
-                        disabled={!textInput || extracting || !hasPermission}
-                        className={`w-full font-bold py-4 rounded-sm text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2
-                            ${hasPermission ? 'bg-secondary text-on-secondary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
-                    >
-                        {extracting ? (
-                            <><span className="material-symbols-outlined animate-spin">sync</span> Extracting...</>
-                        ) : (
-                            <><span className="material-symbols-outlined">auto_awesome</span> Run AI Extraction</>
-                        )}
-                    </button>
-                    {!hasPermission && (
-                        <p className="text-xs text-error text-center">Your current role does not have permission for this action.</p>
-                    )}
-                </div>
-
-                {/* Right: Output */}
-                <div className="flex flex-col gap-6">
-                    {!extractedData ? (
-                        <div className="bg-surface-container-low border border-outline-variant rounded-xl flex items-center justify-center min-h-[350px] text-on-surface-variant flex-col gap-4">
-                            <span className="material-symbols-outlined text-5xl opacity-50">document_scanner</span>
-                            <p>Extraction results will appear here</p>
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-outline-variant rounded-xl p-8 shadow-sm flex flex-col">
-                            <div className="flex justify-between items-start mb-6 border-b border-outline-variant pb-4">
-                                <div>
-                                    <h3 className="font-bold text-lg flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-secondary">fact_check</span>
-                                        Extracted Data
-                                    </h3>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-secondary mt-1">AI-assisted — review & edit before submit</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-[10px] uppercase tracking-widest font-bold opacity-70 block">Confidence</span>
-                                    <span className="text-xl font-bold text-primary">{extractedData.confidence || 80}%</span>
-                                </div>
-                            </div>
-
-                            {extractedData.fields_needing_review?.length > 0 && (
-                                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg mb-4 flex items-start gap-2 text-xs">
-                                    <span className="material-symbols-outlined text-[16px]">warning</span>
-                                    <div>
-                                        <span className="font-bold">Review needed: </span>
-                                        {extractedData.fields_needing_review.join(", ")} could not be fully extracted.
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* DaaS Master Data Validation */}
-                            {validation.checking ? (
-                                <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg mb-4 flex items-center gap-2 text-xs">
-                                    <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
-                                    <span className="font-bold">Validating against Central ERP Database...</span>
-                                </div>
-                            ) : (validation.materialFound !== null || validation.supplierFound !== null) && (
-                                <div className="space-y-2 mb-4">
-                                    {/* Material Validation */}
-                                    {validation.materialFound === true ? (
-                                        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg flex items-center gap-2 text-xs">
-                                            <span className="material-symbols-outlined text-[16px]">verified</span>
-                                            <div>
-                                                <span className="font-bold">Material Verified: </span>
-                                                &quot;{extractedData.material_name}&quot; matched to registered material <span className="font-bold">{validation.materialMatch}</span> in Central Database.
-                                            </div>
-                                        </div>
-                                    ) : validation.materialFound === false ? (
-                                        <div className="bg-red-50 border border-red-300 text-red-800 p-3 rounded-lg flex items-center gap-2 text-xs">
-                                            <span className="material-symbols-outlined text-[16px]">gpp_maybe</span>
-                                            <div>
-                                                <span className="font-bold">⚠ Unregistered Material: </span>
-                                                &quot;{extractedData.material_name}&quot; is <span className="font-bold underline">NOT found</span> in Central ERP Database. This material may be unauthorized or illegal. Contact Management before proceeding.
-                                            </div>
-                                        </div>
-                                    ) : null}
-
-                                    {/* Supplier Validation */}
-                                    {validation.supplierFound === true ? (
-                                        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg flex items-center gap-2 text-xs">
-                                            <span className="material-symbols-outlined text-[16px]">verified</span>
-                                            <div>
-                                                <span className="font-bold">Supplier Verified: </span>
-                                                &quot;{extractedData.supplier_name}&quot; matched to registered supplier <span className="font-bold">{validation.supplierMatch}</span>.
-                                            </div>
-                                        </div>
-                                    ) : validation.supplierFound === false ? (
-                                        <div className="bg-red-50 border border-red-300 text-red-800 p-3 rounded-lg flex items-center gap-2 text-xs">
-                                            <span className="material-symbols-outlined text-[16px]">gpp_maybe</span>
-                                            <div>
-                                                <span className="font-bold">⚠ Unregistered Supplier: </span>
-                                                &quot;{extractedData.supplier_name}&quot; is <span className="font-bold underline">NOT found</span> in Central ERP Database. This supplier may be unauthorized.
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            )}
-
-                            <p className="text-xs text-on-surface-variant mb-4 bg-surface-container-low p-3 rounded-md border border-outline-variant">
-                                <span className="material-symbols-outlined text-[14px] align-middle mr-1">info</span>
-                                AI pre-fills these fields. Please review and edit before submitting.
-                            </p>
-
-                            <div className="space-y-4 flex-1">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Supplier</label>
-                                        <input className="w-full text-sm font-bold border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.supplier_name} onChange={e => handleFieldChange("supplier_name", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Material</label>
-                                        <input className="w-full text-sm font-bold border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.material_name} onChange={e => handleFieldChange("material_name", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Quantity</label>
-                                        <div className="flex gap-2">
-                                            <input type="number" className="w-2/3 text-sm font-bold border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.quantity} onChange={e => handleFieldChange("quantity", e.target.value)} />
-                                            <input className="w-1/3 text-sm border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.unit} onChange={e => handleFieldChange("unit", e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Batch Reference</label>
-                                        <input className="w-full text-sm font-mono border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.batch_reference} onChange={e => handleFieldChange("batch_reference", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Temperature Req.</label>
-                                        <input className="w-full text-sm border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.temperature_requirement} onChange={e => handleFieldChange("temperature_requirement", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase tracking-widest font-bold opacity-70 block mb-1">Hazard Class</label>
-                                        <select className="w-full text-sm border border-outline-variant rounded p-2 focus:border-primary focus:ring-1" value={extractedData.hazard_class} onChange={e => handleFieldChange("hazard_class", e.target.value)}>
-                                            <option value="Normal">Normal</option>
-                                            <option value="Flammable">Flammable</option>
-                                            <option value="Oxidizer">Oxidizer</option>
-                                            <option value="Toxic">Toxic</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setShowConfirm(true)}
-                                disabled={submitting || !hasPermission}
-                                className="w-full bg-primary text-on-primary font-bold py-4 rounded-sm text-sm uppercase tracking-widest hover:opacity-90 transition-opacity mt-6 flex justify-center items-center gap-2 disabled:opacity-50"
-                            >
-                                <span className="material-symbols-outlined">send</span>
-                                Submit to QC
+                {showAiPanel && (
+                    <div className="p-4 border-t border-outline-variant bg-surface-container-lowest space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest self-center">Try:</span>
+                            <button type="button" onClick={() => setAiText("Supplier: Java Citrus Farm\nMaterial: Citrus Peel Extract\nQuantity: 12 drums\nBatch: JCF-CIT-0526\nStorage: -20°C to -4°C, Flammable")} className="px-3 py-1 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors">
+                                Citrus Extract (EN)
+                            </button>
+                            <button type="button" onClick={() => setAiText("tolong catat 400kg cengkeh dari Madura, tiba hari ini buat produksi minggu depan")} className="px-3 py-1 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors">
+                                Cengkeh WhatsApp (ID)
                             </button>
                         </div>
+                        <textarea
+                            className="w-full min-h-[100px] bg-white border border-outline-variant rounded-lg resize-none focus:ring-1 focus:ring-primary p-3 text-sm font-mono"
+                            placeholder="Paste supplier message, email, or delivery note here..."
+                            value={aiText}
+                            onChange={(e) => setAiText(e.target.value)}
+                        />
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleAiExtract}
+                                disabled={!aiText.trim() || extracting}
+                                className="bg-secondary text-on-secondary font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+                            >
+                                {extracting ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : <span className="material-symbols-outlined text-sm">auto_awesome</span>}
+                                {extracting ? "Extracting..." : "Extract with AI"}
+                            </button>
+                            {aiResult && (
+                                <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex-1 bg-secondary-container/30 p-3 rounded-lg border border-secondary/20">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-bold text-secondary">Extraction Complete</span>
+                                            <span className="text-[10px] font-mono font-bold text-secondary">{aiConfidence}% confidence</span>
+                                        </div>
+                                        <p className="text-xs text-on-surface-variant">{aiResult.material_name} from {aiResult.supplier_name} — {aiResult.quantity} {aiResult.unit}</p>
+                                    </div>
+                                    <button
+                                        onClick={handleApplyAi}
+                                        className="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">check</span>
+                                        Apply to Form
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Main Form */}
+            <div className="bg-white rounded-xl border border-outline-variant p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                    <span className="material-symbols-outlined text-primary">edit_note</span>
+                    <h3 className="font-bold text-lg">Receipt Details</h3>
+                    {aiConfidence && (
+                        <span className="ml-auto text-[10px] font-bold uppercase tracking-widest bg-secondary/10 text-secondary px-2 py-1 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
+                            AI-filled ({aiConfidence}%)
+                        </span>
                     )}
                 </div>
+
+                {/* Validation badges */}
+                {(validation.materialFound !== null || validation.supplierFound !== null) && (
+                    <div className="space-y-2 mb-5">
+                        {validation.materialFound === true && (
+                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
+                                <span className="material-symbols-outlined text-[16px]">verified</span>
+                                <span><span className="font-bold">Material verified:</span> matched to <span className="font-bold">{validation.materialMatch}</span></span>
+                            </div>
+                        )}
+                        {validation.materialFound === false && (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
+                                <span className="material-symbols-outlined text-[16px]">warning</span>
+                                <span><span className="font-bold">Material not found</span> in master data — will be created as new entry</span>
+                            </div>
+                        )}
+                        {validation.supplierFound === true && (
+                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
+                                <span className="material-symbols-outlined text-[16px]">verified</span>
+                                <span><span className="font-bold">Supplier verified:</span> matched to <span className="font-bold">{validation.supplierMatch}</span></span>
+                            </div>
+                        )}
+                        {validation.supplierFound === false && (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
+                                <span className="material-symbols-outlined text-[16px]">warning</span>
+                                <span><span className="font-bold">Supplier not found</span> in master data — verify before proceeding</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Supplier *</label>
+                        <input
+                            className={`w-full text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.supplier_name ? "border-error" : "border-outline-variant"}`}
+                            value={form.supplier_name}
+                            onChange={e => updateField("supplier_name", e.target.value)}
+                            onBlur={() => validateMasterData()}
+                            placeholder="e.g. Java Citrus Farm"
+                        />
+                        {errors.supplier_name && <p className="text-xs text-error mt-1">{errors.supplier_name}</p>}
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Material *</label>
+                        <input
+                            className={`w-full text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.material_name ? "border-error" : "border-outline-variant"}`}
+                            value={form.material_name}
+                            onChange={e => updateField("material_name", e.target.value)}
+                            onBlur={() => validateMasterData()}
+                            placeholder="e.g. Citrus Peel Extract"
+                        />
+                        {errors.material_name && <p className="text-xs text-error mt-1">{errors.material_name}</p>}
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Quantity *</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                className={`flex-1 text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.quantity ? "border-error" : "border-outline-variant"}`}
+                                value={form.quantity}
+                                onChange={e => updateField("quantity", e.target.value)}
+                                placeholder="e.g. 400"
+                            />
+                            <select
+                                className="w-24 text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                                value={form.unit}
+                                onChange={e => updateField("unit", e.target.value)}
+                            >
+                                <option value="kg">kg</option>
+                                <option value="L">L</option>
+                                <option value="drums">drums</option>
+                                <option value="pcs">pcs</option>
+                            </select>
+                        </div>
+                        {errors.quantity && <p className="text-xs text-error mt-1">{errors.quantity}</p>}
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Batch Reference *</label>
+                        <input
+                            className={`w-full text-sm font-mono border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.batch_reference ? "border-error" : "border-outline-variant"}`}
+                            value={form.batch_reference}
+                            onChange={e => updateField("batch_reference", e.target.value)}
+                            placeholder="e.g. JCF-CIT-0531"
+                        />
+                        {errors.batch_reference && <p className="text-xs text-error mt-1">{errors.batch_reference}</p>}
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Arrival Date</label>
+                        <input
+                            type="date"
+                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            value={form.arrival_date}
+                            onChange={e => updateField("arrival_date", e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Temperature Requirement</label>
+                        <select
+                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            value={form.temperature_requirement}
+                            onChange={e => updateField("temperature_requirement", e.target.value)}
+                        >
+                            <option value="Ambient">Ambient (15–30°C)</option>
+                            <option value="Chilled (2-8°C)">Chilled (2–8°C)</option>
+                            <option value="-20°C to -4°C">Freezer (-20°C to -4°C)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Hazard Class</label>
+                        <select
+                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            value={form.hazard_class}
+                            onChange={e => updateField("hazard_class", e.target.value)}
+                        >
+                            <option value="Normal">Normal</option>
+                            <option value="Flammable">Flammable</option>
+                            <option value="Oxidizer">Oxidizer</option>
+                            <option value="Toxic">Toxic</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Submit */}
+                <div className="mt-8 pt-6 border-t border-outline-variant flex items-center justify-between">
+                    <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">info</span>
+                        Receipt will be sent to QC queue for inspection.
+                    </p>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => router.push("/inbound")}
+                            className="border border-outline-variant bg-white font-bold py-3 px-6 rounded-sm text-xs uppercase tracking-widest text-on-surface hover:bg-surface-container-low transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => { if (validate()) setShowConfirm(true); }}
+                            disabled={submitting || !hasPermission}
+                            className={`font-bold py-3 px-6 rounded-sm text-xs uppercase tracking-widest transition-all flex items-center gap-2
+                                ${hasPermission ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
+                        >
+                            <span className="material-symbols-outlined text-[16px]">send</span>
+                            Submit to QC
+                        </button>
+                    </div>
+                </div>
+                {!hasPermission && (
+                    <p className="text-xs text-error text-right mt-2">Your role ({role}) does not have permission to create receipts.</p>
+                )}
             </div>
 
             <ConfirmModal
                 isOpen={showConfirm}
                 title="Submit to QC Station?"
-                message={`This will register ${extractedData?.quantity} ${extractedData?.unit} of ${extractedData?.material_name} from ${extractedData?.supplier_name} and send it to the QC queue for review.`}
+                message={`This will register ${form.quantity} ${form.unit} of ${form.material_name} from ${form.supplier_name} and send it to the QC queue for inspection. This action will be audit-logged.`}
                 confirmLabel="Submit to QC"
                 onConfirm={handleSubmit}
                 onCancel={() => setShowConfirm(false)}

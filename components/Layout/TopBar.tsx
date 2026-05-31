@@ -1,43 +1,74 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useMantineColorScheme } from "@mantine/core";
+import { useRouter } from "next/navigation";
 import { notifications as mantineNotifications } from "@mantine/notifications";
+import { ROLES, useRole, UserRole, getActorName } from "@/lib/rbac";
+import { fetchItems } from "@/lib/api/client";
 
-import { ROLES, useRole, UserRole } from "@/lib/rbac";
-
-
-const NOTIFICATIONS = [
-    { id: 1, icon: "warning", color: "text-amber-600", title: "QC Alert", message: "LOT-2026-050 failed odor deviation check", time: "5 min ago", unread: true },
-    { id: 2, icon: "check_circle", color: "text-green-600", title: "Slotting Complete", message: "LOT-2026-049 stored in HAZ-D-04", time: "12 min ago", unread: true },
-    { id: 3, icon: "local_shipping", color: "text-blue-600", title: "New Inbound", message: "500 kg Clove Bud Oil from KTA Ponorogo", time: "1 hr ago", unread: false },
-    { id: 4, icon: "smart_toy", color: "text-purple-600", title: "AI Report Ready", message: "Daily summary has been generated", time: "2 hr ago", unread: false },
-];
+interface NotifItem {
+    id: string;
+    icon: string;
+    color: string;
+    title: string;
+    message: string;
+    time: string;
+    unread: boolean;
+}
 
 export const TopBar = () => {
-    const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-    const isDark = colorScheme === "dark";
-
+    const router = useRouter();
     const { role: activeRole, changeRole } = useRole();
     const [showRoleMenu, setShowRoleMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
-    const [notifications, setNotifications] = useState(NOTIFICATIONS);
+    const [notifications, setNotifications] = useState<NotifItem[]>([]);
+    const [notifsLoaded, setNotifsLoaded] = useState(false);
 
     const roleRef = useRef<HTMLDivElement>(null);
     const notifRef = useRef<HTMLDivElement>(null);
-    const settingsRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => n.unread).length;
+
+    // Load data-driven notifications from operational records
+    useEffect(() => {
+        if (notifsLoaded) return;
+        const loadNotifs = async () => {
+            try {
+                const [zonesRes, auditsRes, receiptsRes] = await Promise.all([
+                    fetchItems<any>("warehouse_zones", {}),
+                    fetchItems<any>("audit_logs", { sort: "-timestamp", limit: 5 }),
+                    fetchItems<any>("inbound_receipts", { limit: 50 }),
+                ]);
+                const items: NotifItem[] = [];
+                // Cold-chain alerts
+                zonesRes.data.filter((z: any) => z.status === "Cold-chain Alert").forEach((z: any) => {
+                    items.push({ id: `cold-${z.id}`, icon: "warning", color: "text-amber-600", title: "Cold-chain Alert", message: `${z.id} at ${z.current_temperature}°C — outside safe range`, time: "Active", unread: true });
+                });
+                // Pending QC
+                const pendingQc = receiptsRes.data.filter((r: any) => r.status === "Pending QC").length;
+                if (pendingQc > 0) {
+                    items.push({ id: "pending-qc", icon: "science", color: "text-purple-600", title: "Pending QC", message: `${pendingQc} material(s) awaiting QC review`, time: "Now", unread: true });
+                }
+                // Recent audit events
+                auditsRes.data.slice(0, 2).forEach((a: any) => {
+                    const icon = a.action.includes("QC") ? "biotech" : a.action.includes("slot") ? "warehouse" : "edit_document";
+                    const color = a.action.includes("Block") ? "text-red-600" : "text-blue-600";
+                    items.push({ id: a.id, icon, color, title: a.action, message: `${a.actor} • ${a.change_detail?.substring(0, 60) || ""}`, time: new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), unread: false });
+                });
+                setNotifications(items);
+                setNotifsLoaded(true);
+            } catch { setNotifsLoaded(true); }
+        };
+        loadNotifs();
+    }, [notifsLoaded]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (roleRef.current && !roleRef.current.contains(e.target as Node)) setShowRoleMenu(false);
             if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
-            if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setShowSettings(false);
             if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -64,20 +95,19 @@ export const TopBar = () => {
     };
 
     const handleLogout = () => {
-        mantineNotifications.show({
-            title: "Logging Out...",
-            message: "You have been securely signed out.",
-            color: "red"
-        });
         setShowProfile(false);
+        localStorage.removeItem("batchnexus_role");
+        router.push("/login");
     };
 
     const currentRole = ROLES.find(r => r.id === activeRole) || ROLES[0];
+    const personaName = getActorName(activeRole);
+    const personaInitials = personaName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    const personaEmail = personaName.toLowerCase().replace(/\s+/g, ".") + "@sima-arome.com";
 
     const closeAll = () => {
         setShowRoleMenu(false);
         setShowNotifications(false);
-        setShowSettings(false);
         setShowProfile(false);
     };
 
@@ -148,7 +178,12 @@ export const TopBar = () => {
                                 )}
                             </div>
                             <div className="max-h-72 overflow-y-auto">
-                                {notifications.map(n => (
+                                {notifications.length === 0 ? (
+                                    <div className="p-6 text-center text-on-surface-variant">
+                                        <span className="material-symbols-outlined text-2xl opacity-50 mb-1">notifications_off</span>
+                                        <p className="text-xs">No notifications</p>
+                                    </div>
+                                ) : notifications.map(n => (
                                     <div key={n.id} className={`flex items-start gap-3 px-4 py-3 border-b border-outline-variant/50 last:border-0 ${n.unread ? 'bg-primary/3' : ''}`}>
                                         <span className={`material-symbols-outlined icon-fill mt-0.5 ${n.color}`}>{n.icon}</span>
                                         <div className="flex-1 min-w-0">
@@ -164,54 +199,31 @@ export const TopBar = () => {
                     )}
                 </div>
 
-                {/* Settings */}
-                <div className="relative" ref={settingsRef}>
-                    <button 
-                        onClick={() => { const s = !showSettings; closeAll(); setShowSettings(s); }}
-                        className="text-on-surface-variant hover:bg-surface-container-highest p-2 rounded-full transition-colors hidden sm:block"
-                    >
-                        <span className="material-symbols-outlined">settings</span>
-                    </button>
-                    {showSettings && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in duration-200">
-                            <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant">
-                                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Settings</p>
-                            </div>
-                            <div className="p-2">
-                                <button onClick={() => toggleColorScheme()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-high text-left transition-colors">
-                                    <span className="material-symbols-outlined text-on-surface-variant">{isDark ? 'light_mode' : 'dark_mode'}</span>
-                                    <span className="text-sm text-on-surface">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-                                    <span className={`ml-auto text-[10px] ${isDark ? 'bg-primary/10 text-primary' : 'bg-surface-container-high text-on-surface-variant'} px-2 py-0.5 rounded-full font-bold`}>{isDark ? 'ON' : 'OFF'}</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
                 {/* Profile Avatar */}
                 <div className="relative" ref={profileRef}>
-                    <img 
+                    <button
                         onClick={() => { const s = !showProfile; closeAll(); setShowProfile(s); }}
-                        className="w-8 h-8 rounded-full border border-outline-variant ml-3 object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all" 
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfpHts9W-80oknBSkpHStx9N5WIZdKleiqw-Ny0vlh1C00prgjseUL2EnyIKIUJw52wyyMqy6EogiEPtKdvt37mPXoQAXkVFox2x1s_2jKoAURdiMh-FVfQ1jnVh54IqXp8AoVVnMpXc19twG6Y72alROnkcgQY-MlhmsNSsx8EkmFMGpTqdggMFujTBsa6RnReEC0LUCEuRmjsHL2KotJUc0ISl-_DHKfl9hAeLV5dpSy_cxJRRFTi-u9TNQhblFf-MyjmEM_IUho" 
-                        alt="User"
-                    />
-                    
+                        className="w-9 h-9 rounded-full bg-primary text-on-primary ml-2 flex items-center justify-center text-xs font-bold cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all"
+                        aria-label="Profile"
+                    >
+                        {personaInitials}
+                    </button>
+
                     {showProfile && (
-                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in duration-200">
+                        <div className="absolute right-0 top-full mt-2 w-72 bg-surface rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in duration-200">
                             <div className="px-5 py-4 border-b border-outline-variant bg-surface-container-low flex flex-col items-center justify-center text-center">
-                                <img className="w-16 h-16 rounded-full border-2 border-primary object-cover mb-3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfpHts9W-80oknBSkpHStx9N5WIZdKleiqw-Ny0vlh1C00prgjseUL2EnyIKIUJw52wyyMqy6EogiEPtKdvt37mPXoQAXkVFox2x1s_2jKoAURdiMh-FVfQ1jnVh54IqXp8AoVVnMpXc19twG6Y72alROnkcgQY-MlhmsNSsx8EkmFMGpTqdggMFujTBsa6RnReEC0LUCEuRmjsHL2KotJUc0ISl-_DHKfl9hAeLV5dpSy_cxJRRFTi-u9TNQhblFf-MyjmEM_IUho" alt="User Avatar"/>
-                                <h3 className="font-bold text-on-surface text-base">Nadia Kusuma</h3>
-                                <p className="text-xs text-on-surface-variant font-medium mt-0.5">nadia.kusuma@sima-arome.com</p>
+                                <div className="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center text-xl font-bold mb-3">{personaInitials}</div>
+                                <h3 className="font-bold text-on-surface text-base">{personaName}</h3>
+                                <p className="text-xs text-on-surface-variant font-medium mt-0.5">{personaEmail}</p>
                                 <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
                                     <span className="material-symbols-outlined text-sm icon-fill">{currentRole.icon}</span>
                                     {currentRole.label}
                                 </div>
                             </div>
                             <div className="p-2">
-                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-left transition-colors group">
-                                    <span className="material-symbols-outlined text-red-500 text-sm group-hover:text-red-600">logout</span>
-                                    <span className="text-sm text-red-500 font-medium group-hover:text-red-600">Sign Out</span>
+                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-error-container/30 text-left transition-colors group">
+                                    <span className="material-symbols-outlined text-error text-sm">logout</span>
+                                    <span className="text-sm text-error font-medium">Sign Out</span>
                                 </button>
                             </div>
                         </div>

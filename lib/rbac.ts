@@ -20,6 +20,77 @@ export const ROLES: { id: UserRole; label: string; icon: string; desc: string }[
     { id: "Customer Service", label: "Customer Service", icon: "support_agent", desc: "View-only dispatch" },
 ];
 
+// Demo persona names per role. Used to attribute audit-log actor names so the
+// "who did what" trail reflects the active persona instead of a generic label.
+export const PERSONA_NAMES: Record<string, string> = {
+    "Receiving Operator": "Dimas Pratama",
+    "QC Staff": "Rani Wulandari",
+    "PPIC Planner": "Budi Hartono",
+    "Warehouse Admin": "Andi Saputra",
+    "Operations Manager": "Maya Santoso",
+    "Customer Service": "Sari Putri",
+    "Admin": "System Admin",
+};
+
+export function getActorName(role: UserRole | string): string {
+    return PERSONA_NAMES[role] || "System Admin";
+}
+
+// ── Route-level access control ────────────────────────────────
+// Each role only sees the modules relevant to its job function.
+// This drives both the sidebar navigation AND route-level access enforcement.
+// "*" means full access (Operations Manager & Admin).
+export const ROLE_ACCESS: Record<string, string[]> = {
+    "Admin": ["*"],
+    "Operations Manager": ["*"],
+    "Receiving Operator": ["/", "/inbound", "/lots"],
+    "QC Staff": ["/", "/qc", "/lots", "/audit"],
+    "PPIC Planner": ["/", "/ppic", "/lots", "/copilot"],
+    "Warehouse Admin": ["/", "/warehouse", "/lots", "/audit"],
+    "Customer Service": ["/lots", "/dispatch", "/copilot"],
+};
+
+// ── Route-to-capability mapping ────────────────────────────────
+// Ensures that route access is always aligned with capability functions.
+// If a route has a corresponding capability check, route access implies
+// capability access. This prevents misalignment between ROLE_ACCESS and can* helpers.
+const ROUTE_CAPABILITY_MAP: Record<string, (role: UserRole | string) => boolean> = {
+    "/audit": canViewAudit,
+    "/summary": canGenerateSummary,
+};
+
+export function canAccessRoute(role: UserRole | string, path: string): boolean {
+    const allowed = ROLE_ACCESS[role] || ROLE_ACCESS["Customer Service"];
+    if (allowed.includes("*")) {
+        // Even wildcard roles must pass capability checks for gated routes
+        const base = "/" + (path.split("/")[1] || "");
+        const capCheck = ROUTE_CAPABILITY_MAP[path] || ROUTE_CAPABILITY_MAP[base];
+        if (capCheck && !capCheck(role)) return false;
+        return true;
+    }
+    // Normalise nested routes (e.g. /inbound/new → /inbound)
+    const base = "/" + (path.split("/")[1] || "");
+    const hasRoute = allowed.includes(path) || allowed.includes(base);
+    if (!hasRoute) return false;
+    // Verify capability alignment: route access must imply capability access
+    const capCheck = ROUTE_CAPABILITY_MAP[path] || ROUTE_CAPABILITY_MAP[base];
+    if (capCheck && !capCheck(role)) return false;
+    return true;
+}
+
+/**
+ * Returns a human-readable reason why a role cannot access a route.
+ * Used by the PageLayout to display an "Access Denied" message.
+ */
+export function getAccessDeniedReason(role: UserRole | string, path: string): string {
+    const base = "/" + (path.split("/")[1] || "");
+    const capCheck = ROUTE_CAPABILITY_MAP[path] || ROUTE_CAPABILITY_MAP[base];
+    if (capCheck && !capCheck(role)) {
+        return `Your role "${role}" does not have the required capability to access this page.`;
+    }
+    return `Your role "${role}" does not have access to this page.`;
+}
+
 export function useRole() {
     const [role, setRole] = useState<UserRole>("Admin");
 
@@ -78,5 +149,10 @@ export function canExportTrace(role: UserRole | string): boolean {
 }
 
 export function canViewAudit(role: UserRole | string): boolean {
+    return ["QC Staff", "Warehouse Admin", "Operations Manager", "Admin"].includes(role);
+}
+
+/** Full audit access (generate summary from audit, export all) — Manager/Admin only */
+export function canManageAudit(role: UserRole | string): boolean {
     return ["Operations Manager", "Admin"].includes(role);
 }

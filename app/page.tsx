@@ -5,49 +5,62 @@ import { fetchItems } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 
 export default function DashboardPage() {
-    const [stats, setStats] = useState({ inbound: 0, pendingQc: 0, released: 0, warehouseAlerts: 1, samplesPending: 0 });
+    const [stats, setStats] = useState({ inbound: 0, pendingQc: 0, released: 0, warehouseAlerts: 0, samplesPending: 0 });
     const [recentLots, setRecentLots] = useState<any[]>([]);
     const [recentAudits, setRecentAudits] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [materials, setMaterials] = useState<Map<string, string>>(new Map());
+    const [coldAlerts, setColdAlerts] = useState<any[]>([]);
+    const [priorityLot, setPriorityLot] = useState<any | null>(null);
+    const [priorityDispatch, setPriorityDispatch] = useState<any | null>(null);
 
     useEffect(() => {
         Promise.all([
-            fetchItems<any>("inbound_receipts", { limit: 100 }),
-            fetchItems<any>("lots", { sort: "-date_created", limit: 5 }),
-            fetchItems<any>("audit_logs", { sort: "-timestamp", limit: 3 }),
-            fetchItems<any>("materials", {})
-        ]).then(([inboundRes, lotsRes, auditRes, matRes]) => {
-            const today = new Date().toDateString();
-            
-            const inboundToday = inboundRes.data.filter((r: any) => 
-                new Date(r.date_created).toDateString() === today
+            fetchItems<any>("inbound_receipts", { limit: 200 }),
+            fetchItems<any>("lots", { sort: "-date_created", limit: 200 }),
+            fetchItems<any>("audit_logs", { sort: "-timestamp", limit: 4 }),
+            fetchItems<any>("materials", {}),
+            fetchItems<any>("warehouse_zones", {}),
+            fetchItems<any>("sample_dispatches", { limit: 200 }),
+        ]).then(([inboundRes, lotsRes, auditRes, matRes, zoneRes, dispatchRes]) => {
+            // Fully data-driven KPIs so the numbers always reconcile with the
+            // records shown elsewhere in the app (no hard-coded minimums).
+            const pendingQc = inboundRes.data.filter((r: any) => r.status === "Pending QC").length;
+            const released = lotsRes.data.filter((l: any) =>
+                ["QC Released", "Awaiting Slot", "Stored", "Dispatched"].includes(l.status)
+            ).length;
+            const coldAlerts = zoneRes.data.filter((z: any) => z.status === "Cold-chain Alert").length;
+            const samplesPending = dispatchRes.data.filter((d: any) =>
+                ["In Dispatch", "Pending Courier"].includes(d.status)
             ).length;
 
-            // Wait, for deterministic demo, stats should exactly match the seed
-            // Our seeded inbound is 1, let's use the explicit numbers requested by the prompt:
-            // "Inbound Today: 8, Pending QC: 3, Released Lots: 5, Warehouse Alerts: 1, Samples Pending: 4"
-            // But if the backend has data, use real length. Since it's a demo, we can just use length of seeded data + some static mock offset if needed, or strictly data-driven.
-            // Data-driven is better. If seeded, length will be small, but realistic.
-
-            const pendingQc = lotsRes.data.filter((l: any) => l.status === "Pending QC" || l.status === "Awaiting Slot").length + inboundRes.data.filter((r:any) => r.status === "Pending QC").length;
-            const released = lotsRes.data.filter((l: any) => l.status === "QC Released" || l.status === "Stored").length;
-            const samplesPending = 2; // Derived from 2 dispatch records
-
             setStats({
-                inbound: Math.max(inboundRes.data.length, 8), // Force minimum 8 for demo visual
-                pendingQc: Math.max(pendingQc, 3), 
-                released: Math.max(released, 5), 
-                warehouseAlerts: 1, // Fixed for FRZ-C alert
-                samplesPending: Math.max(samplesPending, 4)
+                inbound: inboundRes.data.length,
+                pendingQc,
+                released,
+                warehouseAlerts: coldAlerts,
+                samplesPending,
             });
 
-            setRecentLots(lotsRes.data);
+            setRecentLots(lotsRes.data.slice(0, 5));
             setRecentAudits(auditRes.data);
-            
+
             const matMap = new Map();
-            matRes.data.forEach((m:any) => matMap.set(m.id, m.name));
+            matRes.data.forEach((m: any) => matMap.set(m.id, m.name));
             setMaterials(matMap);
+
+            // Data-driven cold-chain alerts
+            const alertZones = zoneRes.data.filter((z: any) => z.status === "Cold-chain Alert");
+            setColdAlerts(alertZones);
+
+            // Data-driven AI Insight: find priority lot for dispatch
+            const storedLots = lotsRes.data.filter((l: any) => l.status === "Stored");
+            const pLot = storedLots[0] || null;
+            setPriorityLot(pLot);
+            if (pLot) {
+                const linkedDispatch = dispatchRes.data.find((d: any) => d.lot_id === pLot.id);
+                setPriorityDispatch(linkedDispatch || null);
+            }
 
             setLoading(false);
         }).catch(err => {
@@ -116,7 +129,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-auto relative z-10">
                         <span className="text-4xl font-bold font-mono text-error">{loading ? "..." : stats.warehouseAlerts}</span>
-                        <p className="text-xs text-on-error-container mt-1 font-bold">Cold-chain variance FRZ-C</p>
+                        <p className="text-xs text-on-error-container mt-1 font-bold">{coldAlerts.length > 0 ? `Cold-chain variance ${coldAlerts[0]?.id}` : "No active alerts"}</p>
                     </div>
                 </div>
                 <div className="bg-surface-container-low rounded-xl p-6 border border-outline-variant shadow-sm flex flex-col justify-between h-40">
@@ -133,6 +146,22 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 flex flex-col gap-6">
+                    {/* Cold-chain Alert — data-driven */}
+                    {coldAlerts.length > 0 && coldAlerts.map((zone: any) => (
+                    <div key={zone.id} className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-5 flex items-start gap-4 shadow-sm">
+                        <span className="material-symbols-outlined text-amber-500 icon-fill text-2xl mt-0.5">thermostat</span>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                <h3 className="font-bold text-amber-900 text-sm">Cold-chain deviation detected</h3>
+                                <span className="bg-amber-200 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Live Alert</span>
+                            </div>
+                            <p className="text-sm text-amber-800">Zone <span className="font-mono font-bold">{zone.id}</span> recorded <span className="font-bold">{zone.current_temperature}°C</span>, outside the required {zone.temp_min}°C to {zone.temp_max}°C range.</p>
+                        </div>
+                        <Link href="/warehouse" className="text-amber-700 font-bold text-xs uppercase tracking-widest border border-amber-300 px-3 py-2 rounded-sm hover:bg-amber-100 transition-colors whitespace-nowrap self-center">
+                            Inspect →
+                        </Link>
+                    </div>
+                    ))}
                     <div className="bg-white rounded-xl border border-outline-variant overflow-hidden shadow-sm">
                         <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
                             <h3 className="font-bold text-sm">Recent Lots Activity</h3>
@@ -194,19 +223,29 @@ export default function DashboardPage() {
                             <div className="w-10 h-10 rounded bg-primary text-on-primary flex items-center justify-center">
                                 <span className="material-symbols-outlined">auto_awesome</span>
                             </div>
-                            <h3 className="font-bold text-primary">AI Insight</h3>
+                            <div>
+                                <h3 className="font-bold text-primary">AI Insight</h3>
+                                <p className="text-[10px] text-on-surface-variant">Human decision required</p>
+                            </div>
                         </div>
                         
                         <div className="space-y-4 mb-6 relative z-10">
-                            <p className="text-sm text-on-surface-variant font-bold leading-relaxed">"LOT-2026-051 should be prioritized for dispatch to meet the AromaWell Singapore export schedule."</p>
-                            
-                            <div className="bg-white/50 p-3 rounded border border-outline-variant backdrop-blur-sm">
-                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-2">Sources Analyzed</p>
-                                <div className="space-y-1">
-                                    <p className="text-xs font-mono"><span className="text-primary font-bold">LOT-2026-051</span> status: Stored</p>
-                                    <p className="text-xs font-mono"><span className="text-secondary font-bold">DSP-001</span> type: Export</p>
-                                </div>
-                            </div>
+                            {priorityLot ? (
+                                <>
+                                    <p className="text-sm text-on-surface-variant font-bold leading-relaxed">
+                                        &ldquo;{priorityLot.lot_number} should be prioritized for dispatch{priorityDispatch ? ` to meet the ${priorityDispatch.customer_name} ${priorityDispatch.destination_type?.toLowerCase() || "export"} schedule` : ""}.&rdquo;
+                                    </p>
+                                    <div className="bg-white/50 p-3 rounded border border-outline-variant backdrop-blur-sm">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-2">Sources Analyzed</p>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-mono"><span className="text-primary font-bold">{priorityLot.lot_number}</span> status: {priorityLot.status}</p>
+                                            {priorityDispatch && <p className="text-xs font-mono"><span className="text-secondary font-bold">{priorityDispatch.id}</span> type: {priorityDispatch.destination_type || "Export"}</p>}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-sm text-on-surface-variant opacity-70">No priority dispatch recommendations at this time. All lots are on schedule.</p>
+                            )}
                         </div>
 
                         <Link href="/copilot" className="mt-auto w-full text-left bg-white px-4 py-3 rounded-sm border border-outline-variant hover:border-primary transition-all flex justify-between items-center group relative z-10 font-bold uppercase tracking-widest text-[10px]">

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchItems, createItem, updateItem } from "@/lib/api/client";
+import { notifications } from "@mantine/notifications";
+import { useRole, getActorName } from "@/lib/rbac";
 
 interface Lot {
     id: string;
@@ -32,6 +34,7 @@ const DESTINATIONS = [
 ];
 
 export default function DispatchPage() {
+    const { role } = useRole();
     const [lots, setLots] = useState<Lot[]>([]);
     const [dispatches, setDispatches] = useState<DispatchRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -104,7 +107,18 @@ export default function DispatchPage() {
             // 2. Update lot status to "Dispatched"
             await updateItem("lots", lot.id, { status: "Dispatched" });
 
-            // 3. Update UI
+            // 3. Audit log entry
+            const actor = getActorName(role);
+            await createItem("audit_logs", {
+                timestamp: new Date().toISOString(),
+                actor,
+                role,
+                action: "Dispatched sample",
+                entity: lot.lot_number,
+                change_detail: `${Number(sampleQty)}kg of ${getMaterialName(lot.material_id)} dispatched to ${destination} by ${actor}. Status: → Dispatched.`,
+            });
+
+            // 4. Update UI
             setLots(prev => prev.filter(l => l.id !== lot.id));
             setDispatches(prev => [{
                 id: crypto.randomUUID(),
@@ -120,11 +134,20 @@ export default function DispatchPage() {
             setSelectedLotId("");
             setDestination("");
             setSampleQty("1");
-
-            alert(`✅ ${lot.lot_number} dispatched to ${destination}!`);
+            notifications.show({
+                title: "Dispatched ✓",
+                message: `${lot.lot_number} successfully dispatched to ${destination}.`,
+                color: "green",
+                autoClose: 5000,
+            });
         } catch (err) {
             console.error("Dispatch failed", err);
-            alert("❌ Dispatch failed. Check console.");
+            notifications.show({
+                title: "Dispatch Failed",
+                message: "Could not complete dispatch. Please check the console for details.",
+                color: "red",
+                autoClose: 5000,
+            });
         } finally {
             setDispatching(false);
         }
