@@ -19,16 +19,23 @@ Product promise: **Input once. Trace everything. Slot safely. Answer instantly.*
 
 ## 📸 Screenshots
 
-*(Hackathon Note: Please replace these placeholder images with actual screenshots of your application)*
+*(Hackathon Note: Please replace the remaining placeholder images with actual screenshots of your application)*
 
-| Dashboard & KPI | AI Inbound Intake |
-|:---:|:---:|
-| ![Dashboard](<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
-) <br> *Real-time metrics and cold-chain monitoring* | ![Inbound](public/screenshots/inbound.png) <br> *AI Copilot auto-filling DO data* |
+### Dashboard & KPI
+*Real-time metrics and cold-chain monitoring*
+<img width="1920" alt="Dashboard" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
 
-| Computer Vision QC | Smart Warehouse Slotting |
-|:---:|:---:|
-| ![QC Station](public/screenshots/qc.png) <br> *On-device visual analysis for sample screening* | ![Warehouse](public/screenshots/warehouse.png) <br> *Drag-and-drop hazard-aware slotting* |
+### AI Inbound Intake
+*AI Copilot auto-filling DO data*
+![Inbound](public/screenshots/inbound.png)
+
+### Computer Vision QC
+*On-device visual analysis for sample screening*
+![QC Station](public/screenshots/qc.png)
+
+### Smart Warehouse Slotting
+*Drag-and-drop hazard-aware slotting*
+![Warehouse](public/screenshots/warehouse.png)
 
 ---
 
