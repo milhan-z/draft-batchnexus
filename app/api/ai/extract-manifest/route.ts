@@ -169,10 +169,10 @@ export async function POST(req: Request) {
           system: "You are an AI assistant for a raw materials factory (Sima Arome). Extract the delivery information from the user's text and map it to our structured inbound receipt schema. The text may be in Indonesian or English. If a field is not explicitly mentioned, use your best judgment or infer from context. For Indonesian material names, translate to English product names (e.g., cengkeh = Clove Bud Oil).",
           schema: z.object({
             material_name: z.string().describe("The name of the material in English (e.g., Clove Bud Oil, Lavender Absolute, Citrus Peel Extract)"),
-            supplier_name: z.string().describe("The name of the supplier (e.g., KTA Ponorogo, Java Citrus Farm)"),
+            supplier_name: z.string().describe("The exact name of the supplier from the text. DO NOT invent or guess prefixes (like 'KTA' or 'PT'). If it just says 'madura', output 'Madura Spice Co.' or 'Madura Clove Cooperative' based on typical industry context."),
             quantity: z.number().describe("The numerical quantity of the material"),
             unit: z.string().describe("The unit of measurement (e.g., kg, L, drums)"),
-            batch_reference: z.string().describe("Generate a short, logical batch reference based on the supplier and material. E.g., 'KTA-CLV-0529'"),
+            batch_reference: z.string().describe("Generate a short, logical batch reference based on the supplier and material. E.g., 'MAD-CLO-0529'"),
             hazard_class: z.enum(["Normal", "Flammable", "Oxidizer", "Toxic"]).describe("Infer the hazard class based on the material. Essential oils are often Flammable."),
             temperature_requirement: z.string().describe("Infer the storage temperature. Options: Ambient, Chilled (2-8°C), -20°C to -4°C"),
           }),
