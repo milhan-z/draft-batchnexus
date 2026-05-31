@@ -149,9 +149,11 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
 
 ---
 
-## 👥 User Roles & RBAC
+## User Roles & RBAC
 
 BatchNexus includes a comprehensive Role-Based Access Control (RBAC) system. Depending on the active role, the sidebar navigation, UI buttons, and data access will dynamically adapt. Switch roles from the login page or the topbar to test the permissions:
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c81c2d9b-c1d4-4591-b6d7-8baa28ba2eca" />
 
 > [!NOTE]
 > **Login Page / Role Selector (Demo Mode)**
