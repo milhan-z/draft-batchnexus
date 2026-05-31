@@ -73,8 +73,8 @@ export default function LotsTraceabilityPage() {
     const renderTraceabilityTimeline = () => {
         if (!selectedLot) return null;
 
-        const receipt = receipts.get(selected(lot.receipt_id || lot.source_receipt_id) || selectedLot.receipt_id);
-        const supplierName = getSupplierName(selected(lot.receipt_id || lot.source_receipt_id) || selectedLot.receipt_id);
+        const receipt = receipts.get(selectedLot.receipt_id || selectedLot.source_receipt_id);
+        const supplierName = getSupplierName(selectedLot.receipt_id || selectedLot.source_receipt_id);
         const materialName = getMaterialName(selectedLot.material_id);
         const conf = receipt?.extraction_confidence ? Math.round(receipt.extraction_confidence * 100) : 90;
         const fmt = (iso?: string) => iso
@@ -220,7 +220,7 @@ export default function LotsTraceabilityPage() {
                                             <StatusBadge status={selectedLot.status} />
                                         </div>
                                         <p className="text-sm font-bold text-on-surface">{getMaterialName(selectedLot.material_id)}</p>
-                                        <p className="text-xs text-on-surface-variant mt-1">{getSupplierName(selected(lot.receipt_id || lot.source_receipt_id) || selectedLot.receipt_id)}</p>
+                                        <p className="text-xs text-on-surface-variant mt-1">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)}</p>
                                     </div>
                                     {/* Right: Summary card */}
                                     <div className="lg:w-64 bg-white rounded-xl border border-outline-variant p-4 space-y-2.5">
@@ -300,15 +300,15 @@ export default function LotsTraceabilityPage() {
                                             <h4 className="font-bold text-sm border-b pb-2">Material Origin</h4>
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold opacity-70">Supplier</p>
-                                                <p className="font-bold text-sm">{getSupplierName(selected(lot.receipt_id || lot.source_receipt_id))}</p>
+                                                <p className="font-bold text-sm">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id))}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold opacity-70">Source Receipt</p>
-                                                <p className="font-mono text-sm">{getReceipt(selected(lot.receipt_id || lot.source_receipt_id))?.receipt_no}</p>
+                                                <p className="font-mono text-sm">{getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.receipt_no}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase font-bold opacity-70">Quantity</p>
-                                                <p className="text-sm font-bold">{selectedLot.quantity} {getReceipt(selected(lot.receipt_id || lot.source_receipt_id))?.unit}</p>
+                                                <p className="text-sm font-bold">{selectedLot.quantity} {getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.unit}</p>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
@@ -337,7 +337,7 @@ export default function LotsTraceabilityPage() {
 
                                 {activeTab === 'qc data' && (
                                     <div className="max-w-xl">
-                                        {qc.filter(q => q.receipt_id === (selected(lot.receipt_id || lot.source_receipt_id) || selectedLot.receipt_id)).map(q => (
+                                        {qc.filter(q => q.receipt_id === ((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)).map(q => (
                                             <div key={q.id} className="bg-surface-container-low border border-outline-variant p-5 rounded-xl space-y-4">
                                                 <div className="flex justify-between items-center border-b pb-3">
                                                     <span className="font-mono font-bold">{q.id}</span>
@@ -369,7 +369,7 @@ export default function LotsTraceabilityPage() {
                                                 </div>
                                             </div>
                                         ))}
-                                        {qc.filter(q => q.receipt_id === (selected(lot.receipt_id || lot.source_receipt_id) || selectedLot.receipt_id)).length === 0 && (
+                                        {qc.filter(q => q.receipt_id === ((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)).length === 0 && (
                                             <div className="text-center py-8 text-on-surface-variant opacity-70">
                                                 <span className="material-symbols-outlined text-3xl mb-2 opacity-50">science</span>
                                                 <p className="text-sm">No QC records found for this lot.</p>
@@ -380,7 +380,7 @@ export default function LotsTraceabilityPage() {
 
                                 {activeTab === 'audit log' && (
                                     <div className="space-y-2">
-                                        {audits.filter(a => a.entity === selectedLot.id || a.entity === selected(lot.receipt_id || lot.source_receipt_id) || a.entity.includes('QC-') || a.entity.includes('REC-') || a.change_detail?.includes(selectedLot.lot_number)).map(a => (
+                                        {audits.filter(a => a.entity === selectedLot.id || a.entity === (selectedLot.receipt_id || selectedLot.source_receipt_id) || a.entity.includes('QC-') || a.entity.includes('REC-') || a.change_detail?.includes(selectedLot.lot_number)).map(a => (
                                             <div key={a.id} className="text-xs p-3 border-b flex gap-4 hover:bg-surface-container-low transition-colors rounded">
                                                 <div className="w-32 font-mono opacity-70 shrink-0">{new Date(a.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                                                 <div className="w-40 font-bold shrink-0">{a.actor}</div>
