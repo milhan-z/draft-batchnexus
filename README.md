@@ -1,69 +1,82 @@
-# 🏭 BatchNexus Control Tower
+# BatchNexus Control Tower
 
 > One operational brain for intake, QC, lot tracking, warehouse, and dispatch.
 
 **BatchNexus Control Tower** is an AI-assisted manufacturing operations control tower built for **Sima Arôme**, a natural extracts manufacturer serving F&B, cosmetics, and wellness brands. 
 
-Created for **CyberHack 2026 — Sima Arôme Manufacturing Innovation Challenge**.
+Created for **CyberHack 2026 Sima Arôme Manufacturing Innovation Challenge**.
 
 Product promise: **Input once. Trace everything. Slot safely. Answer instantly.**
 
----
 
-## 🏆 Submission Links
+## Submission Links
 - **Live Demo Link:** [Insert AWS Amplify / BuildPad URL Here]
 - **Pitch Deck:** [Insert Link to Pitch Deck PDF]
 - **Demo Video:** [Insert YouTube/Vimeo Link]
 
----
-
-## 📸 Screenshots & Features Tour
-
-*(Hackathon Note: Please replace the placeholder images with actual screenshots of your application)*
+## Screenshots & Features Tour
 
 ### 1. Dashboard & KPI
 *Provides a real-time executive overview of factory operations. Monitors active cold-chain alerts, tracks total pending items across all departments, and delivers AI-generated insights so managers can make data-driven decisions without digging through spreadsheets.*
+
 <img width="1920" alt="Dashboard" src="https://github.com/user-attachments/assets/59324dc9-c199-47cb-8e44-7fdb6c0e84db" />
 
 ### 2. AI Inbound Intake
 *Eliminates manual data entry errors. Warehouse operators simply paste text or WhatsApp messages from suppliers, and our Groq (Llama 3.1) AI instantly extracts the material, supplier, quantity, and temperature requirements into a structured form.*
-![Inbound](public/screenshots/inbound.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/0788622f-99fd-46c1-b687-b925f6219835" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2caba527-a4eb-4f8d-9251-3e4d7ffcba0e" />
+
 
 ### 3. Computer Vision QC
 *Revolutionizes quality control with an on-device AI vision engine. It analyzes sample photos pixel-by-pixel to calculate color deviation (ΔE) and detect dark-spot anomalies. It acts as a highly accurate screening assistant before final human sign-off.*
-![QC Station](public/screenshots/qc.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c9184896-317a-419a-b3ef-6b7ba22f10d6" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3d125f93-49e0-4b2c-8aac-6dafd18b58ed" />
+
 
 ### 4. PPIC Production Board
 *A visual drag-and-drop Kanban board that transforms production planning. PPIC managers can seamlessly move approved lots into staging, ensuring the production line is always fed with QC-cleared materials.*
-![PPIC Board](public/screenshots/ppic.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2870b758-427e-4d38-b639-bfcca04d43c4" />
 
 ### 5. Lot Traceability Timeline
 *Solves the biggest compliance headache in manufacturing. Clicking any Lot reveals a visual, end-to-end provenance timeline—tracing exactly when it arrived, who approved the QC, where it was stored, and when it was dispatched.*
-![Lots Traceability](public/screenshots/lots.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/7aa84e29-1d53-4228-9191-5b8bcf103ea1" />
+
 
 ### 6. Smart Warehouse Slotting
 *Prevents catastrophic storage errors. Features a visual digital twin of the warehouse with drag-and-drop assignment. The system actively enforces hazard segregation rules and cold-chain temperature limits, rejecting unsafe placements instantly.*
-![Warehouse](public/screenshots/warehouse.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d8464238-f656-4531-b3ca-a5acb3ce2747" />
+
 
 ### 7. Dispatch & Fulfillment
 *Streamlines outbound logistics. Allows operations to quickly pack and dispatch released lots or customer samples, updating inventory levels and generating a final audit trail of the material leaving the facility.*
-![Dispatch](public/screenshots/dispatch.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/00fc0da3-5905-4bc0-a4e1-b3b332aa7700" />
+
 
 ### 8. Ops Copilot
 *A 24/7 intelligent assistant for the factory floor. Instead of navigating menus, staff can ask natural language questions like "Where is Lot 2026-X stored?" and the Copilot instantly retrieves the exact answer from the live operational database.*
-![Ops Copilot](public/screenshots/copilot.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/28ade6bd-36fe-4b95-9949-54e9ed3ff9fa" />
+
 
 ### 9. AI Operations Summary
 *Automates daily reporting. At the end of the shift, the AI analyzes all operational data, bottlenecks, and alerts to generate a professional "Daily Digest", replacing hours of manual reporting work for the plant manager.*
-![AI Summary](public/screenshots/summary.png)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/376d5387-a8c0-4e65-98b5-54cb041d3957" />
+
 
 ### 10. Immutable Audit Log
 *The ultimate compliance tool for ISO and FDA standards. Every single action taken in BatchNexus is permanently recorded with the actor's name, role, precise timestamp, and change details. No data can ever be silently altered.*
-![Audit Log](public/screenshots/audit.png)
 
----
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8e1a3c93-6808-4c1f-bdc6-3120fd8c6e8f" />
 
-## 🚀 The Problem vs The Solution
+
+## The Problem vs The Solution
 
 ### The Problem
 Sima Arôme's operations are fragmented across spreadsheets, notebooks, chats, and disconnected tools:
@@ -74,7 +87,6 @@ Sima Arôme's operations are fragmented across spreadsheets, notebooks, chats, a
 ### The Solution (BatchNexus)
 BatchNexus connects the full workflow — inbound intake → QC → lot creation → warehouse slotting → dispatch — into one searchable, auditable source of truth. AI assists at every step, but humans approve every critical decision and everything is audit-logged.
 
----
 
 ## 💻 Installation Steps
 
