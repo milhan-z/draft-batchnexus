@@ -9,219 +9,132 @@ const PERSONAS: {
     name: string;
     initial: string;
     desc: string;
-    cardClass: string;
-    badgeClass: string;
-    avatarClass: string;
+    icon: string;
 }[] = [
-    {
-        roleId: "Receiving Operator",
-        name: "Dimas Pratama",
-        initial: "DP",
-        desc: "Inbound receipts, AI extraction, submit to QC",
-        cardClass: "bg-blue-50 border-blue-200 hover:border-blue-400 hover:bg-blue-100",
-        badgeClass: "bg-blue-100 text-blue-700",
-        avatarClass: "bg-blue-500",
-    },
-    {
-        roleId: "QC Staff",
-        name: "Rani Wulandari",
-        initial: "RW",
-        desc: "Review AI QC results, approve/block material release",
-        cardClass: "bg-purple-50 border-purple-200 hover:border-purple-400 hover:bg-purple-100",
-        badgeClass: "bg-purple-100 text-purple-700",
-        avatarClass: "bg-purple-500",
-    },
-    {
-        roleId: "PPIC Planner",
-        name: "Budi Hartono",
-        initial: "BH",
-        desc: "Production scheduling, readiness board, lot prioritization",
-        cardClass: "bg-amber-50 border-amber-200 hover:border-amber-400 hover:bg-amber-100",
-        badgeClass: "bg-amber-100 text-amber-700",
-        avatarClass: "bg-amber-500",
-    },
-    {
-        roleId: "Warehouse Admin",
-        name: "Andi Saputra",
-        initial: "AS",
-        desc: "Smart slotting, manual override, cold-chain monitoring",
-        cardClass: "bg-teal-50 border-teal-200 hover:border-teal-400 hover:bg-teal-100",
-        badgeClass: "bg-teal-100 text-teal-700",
-        avatarClass: "bg-teal-600",
-    },
-    {
-        roleId: "Operations Manager",
-        name: "Maya Santoso",
-        initial: "MS",
-        desc: "Full oversight — all modules, AI reports, audit trail",
-        cardClass: "bg-primary-container/30 border-primary/20 hover:border-primary hover:bg-primary-container/50",
-        badgeClass: "bg-primary text-on-primary",
-        avatarClass: "bg-primary",
-    },
-    {
-        roleId: "Customer Service",
-        name: "Sari Putri",
-        initial: "SP",
-        desc: "Lot status, sample dispatch, Ops Copilot (read-only)",
-        cardClass: "bg-surface-container border-outline-variant hover:border-outline hover:bg-surface-container-high",
-        badgeClass: "bg-surface-variant text-on-surface-variant",
-        avatarClass: "bg-outline",
-    },
+    { roleId: "Receiving Operator", name: "Dimas Pratama", initial: "DP", desc: "Inbound receipts, AI extraction, submit to QC", icon: "📦" },
+    { roleId: "QC Staff", name: "Rani Wulandari", initial: "RW", desc: "Review AI QC results, approve/block material release", icon: "🔬" },
+    { roleId: "PPIC Planner", name: "Budi Hartono", initial: "BH", desc: "Production scheduling, readiness board, lot prioritization", icon: "📅" },
+    { roleId: "Warehouse Admin", name: "Andi Saputra", initial: "AS", desc: "Smart slotting, manual override, cold-chain monitoring", icon: "🏭" },
+    { roleId: "Operations Manager", name: "Maya Santoso", initial: "MS", desc: "Full oversight — all modules, AI reports, audit trail", icon: "🎛️" },
+    { roleId: "Customer Service", name: "Sari Putri", initial: "SP", desc: "Lot status, sample dispatch, Ops Copilot (read-only)", icon: "💬" },
 ];
 
 export default function LoginPage() {
     const router = useRouter();
-    const [selecting, setSelecting] = useState<string | null>(null);
+    const [selected, setSelected] = useState<string>("Operations Manager");
+    const [selecting, setSelecting] = useState(false);
 
-    const handleSelect = (roleId: UserRole) => {
+    const handleEnter = () => {
         if (selecting) return;
-        setSelecting(roleId);
-        localStorage.setItem("batchnexus_role", roleId);
+        setSelecting(true);
+        localStorage.setItem("batchnexus_role", selected);
         window.dispatchEvent(new Event("roleChange"));
         setTimeout(() => router.push("/"), 500);
     };
 
     return (
-        <div className="min-h-screen flex">
-            {/* ── LEFT: Branding Panel ───────────────────────── */}
-            <div className="hidden lg:flex w-[38%] bg-primary flex-col justify-between p-12 relative overflow-hidden">
-                {/* decorative circles */}
-                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/5" />
-                <div className="absolute -bottom-16 -left-16 w-80 h-80 rounded-full bg-white/5" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-white/3" />
+        <div className="min-h-screen w-full grid lg:grid-cols-2 bg-slate-950">
+            {/* Left brand panel */}
+            <div className="relative hidden lg:flex flex-col p-12 text-white overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900" />
+                <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-400/30 rounded-full blur-3xl animate-float-slow" />
+                <div className="absolute -bottom-40 -left-20 w-96 h-96 bg-teal-400/20 rounded-full blur-3xl animate-float-slow" style={{ animationDelay: "2s" }} />
 
                 {/* Logo */}
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-on-primary icon-fill">factory</span>
-                        </div>
-                        <div>
-                            <h1 className="font-display font-bold text-2xl text-on-primary leading-none">Sima Arôme</h1>
-                            <p className="text-on-primary/60 text-[10px] font-mono uppercase tracking-widest mt-0.5">BatchNexus Control Tower</p>
-                        </div>
-                    </div>
+                <div className="relative">
+                    <img src="/logo-batchnexus.png" alt="BatchNexus Control Tower" className="h-10 object-contain brightness-0 invert" />
                 </div>
 
                 {/* Tagline */}
-                <div className="relative z-10 space-y-8">
-                    <blockquote className="text-on-primary/90 text-2xl font-display font-bold leading-snug">
-                        "Input once.<br />
-                        Trace everything.<br />
-                        Slot safely.<br />
-                        Answer instantly."
-                    </blockquote>
+                <div className="relative mt-auto">
+                    <h1 className="text-4xl leading-tight font-semibold font-display">
+                        One operational brain for intake, QC, lot tracking, warehouse & dispatch.
+                    </h1>
+                    <p className="mt-4 text-emerald-100/80 max-w-md">
+                        Input once. Trace everything. Slot safely. Answer instantly. AI assists at every step — humans approve every critical decision.
+                    </p>
 
-                    <div className="space-y-3">
+                    <div className="mt-8 flex flex-col gap-2.5 max-w-md">
                         {[
-                            "AI-powered document extraction",
-                            "End-to-end lot traceability",
-                            "Smart warehouse slotting",
-                            "Immutable audit trail",
-                            "Role-based access control",
-                        ].map((feat) => (
-                            <div key={feat} className="flex items-center gap-2.5 text-on-primary/70 text-sm">
-                                <span className="material-symbols-outlined text-on-primary/60 icon-fill text-base">check_circle</span>
-                                {feat}
+                            { icon: "bolt", text: "AI-assisted intake from any supplier message" },
+                            { icon: "verified", text: "Computer-vision QC with human sign-off" },
+                            { icon: "inventory_2", text: "Smart slotting with cold-chain & hazard policy" },
+                        ].map(f => (
+                            <div key={f.icon} className="flex items-center gap-3 text-sm text-emerald-50/90">
+                                <span className="w-7 h-7 rounded-lg bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
+                                    <span className="material-symbols-outlined text-emerald-300 text-[16px]">{f.icon}</span>
+                                </span>
+                                {f.text}
                             </div>
                         ))}
                     </div>
-                </div>
 
-                {/* Footer */}
-                <div className="relative z-10">
-                    <div className="flex items-center gap-4">
-                        <span className="text-on-primary/30 text-[10px] uppercase tracking-widest">Powered by</span>
-                        <span className="text-on-primary/50 text-[10px] font-mono font-bold">BuildPad DaaS</span>
-                        <span className="text-on-primary/20">×</span>
-                        <span className="text-on-primary/50 text-[10px] font-mono font-bold">Groq Llama-3</span>
+                    <div className="mt-8 grid grid-cols-3 gap-4 max-w-md pt-6 border-t border-white/10">
+                        <div>
+                            <div className="text-3xl text-emerald-300 font-semibold">98<span className="text-lg">%</span></div>
+                            <div className="text-xs text-emerald-100/70 mt-1">QC accuracy</div>
+                        </div>
+                        <div>
+                            <div className="text-3xl text-emerald-300 font-semibold">3.2<span className="text-lg">x</span></div>
+                            <div className="text-xs text-emerald-100/70 mt-1">Faster intake</div>
+                        </div>
+                        <div>
+                            <div className="text-3xl text-emerald-300 font-semibold">0</div>
+                            <div className="text-xs text-emerald-100/70 mt-1">Lost lots</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* ── RIGHT: Role Selector ───────────────────────── */}
-            <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-surface-container-lowest overflow-y-auto">
-                <div className="w-full max-w-2xl">
-                    {/* Mobile logo */}
-                    <div className="lg:hidden flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                            <span className="material-symbols-outlined text-on-primary icon-fill">factory</span>
+            {/* Right login */}
+            <div className="flex items-center justify-center p-6 bg-slate-50 min-h-screen">
+                <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 flex flex-col gap-5">
+                    <div>
+                        <div className="text-xs uppercase tracking-wider text-emerald-600 mb-1 font-semibold">Demo mode</div>
+                        <h2 className="text-2xl text-slate-900 font-semibold">Choose your role</h2>
+                        <p className="text-sm text-slate-500 mt-1">No password required. Each role unlocks different permissions across the control tower.</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 stagger">
+                        {PERSONAS.map(r => (
+                            <button
+                                key={r.roleId}
+                                onClick={() => setSelected(r.roleId)}
+                                className={`text-left p-3 rounded-lg border transition-all ${
+                                    selected === r.roleId
+                                        ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100"
+                                        : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                                }`}
+                            >
+                                <div className="text-lg leading-none">{r.icon}</div>
+                                <div className="text-sm text-slate-900 mt-1.5 font-medium">{r.name}</div>
+                                <div className="text-[10px] text-slate-500 mt-0.5">{r.roleId}</div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={handleEnter}
+                        disabled={selecting}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                    >
+                        {selecting ? (
+                            <><span className="material-symbols-outlined animate-spin text-[16px]">sync</span> Entering...</>
+                        ) : (
+                            <>Enter control tower <span className="material-symbols-outlined text-[16px]">arrow_forward</span></>
+                        )}
+                    </button>
+
+                    <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-emerald-500 text-[14px] icon-fill">shield</span> RBAC
                         </div>
-                        <div>
-                            <h1 className="font-display font-bold text-xl text-primary leading-none">Sima Arôme</h1>
-                            <p className="text-on-surface-variant text-[10px] uppercase tracking-widest">BatchNexus Control Tower</p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-emerald-500 text-[14px] icon-fill">lock</span> Audit logged
                         </div>
-                    </div>
-
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h2 className="font-display font-bold text-2xl text-on-surface">Select your role</h2>
-                        <p className="text-on-surface-variant text-sm mt-1">
-                            Choose a persona to explore the system with appropriate access permissions.
-                        </p>
-                    </div>
-
-                    {/* Persona cards grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {PERSONAS.map((p) => {
-                            const isSelecting = selecting === p.roleId;
-                            const isLoading = !!selecting;
-
-                            return (
-                                <button
-                                    key={p.roleId}
-                                    onClick={() => handleSelect(p.roleId)}
-                                    disabled={isLoading}
-                                    className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200
-                                        ${p.cardClass}
-                                        ${isSelecting ? "scale-[0.97] opacity-70" : "hover:shadow-md hover:-translate-y-0.5"}
-                                        ${isLoading && !isSelecting ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-                                    `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        {/* Avatar */}
-                                        <div
-                                            className={`w-11 h-11 rounded-full ${p.avatarClass} text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm`}
-                                        >
-                                            {isSelecting ? (
-                                                <span className="material-symbols-outlined animate-spin text-sm">sync</span>
-                                            ) : (
-                                                p.initial
-                                            )}
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                                                <p className="font-bold text-sm text-on-surface">{p.name}</p>
-                                                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 ${p.badgeClass}`}>
-                                                    {p.roleId === "Operations Manager" ? "Ops Manager" : p.roleId}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-on-surface-variant leading-relaxed">{p.desc}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Entering indicator */}
-                                    {isSelecting && (
-                                        <div className="mt-3 flex items-center gap-2 text-xs font-bold text-on-surface-variant">
-                                            <span className="material-symbols-outlined text-sm animate-spin">sync</span>
-                                            Entering as {p.name}...
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Demo note */}
-                    <div className="mt-8 text-center">
-                        <p className="text-[11px] text-on-surface-variant/60 uppercase tracking-widest font-bold">
-                            Demo Mode — No password required
-                        </p>
-                        <p className="text-[10px] text-on-surface-variant/40 mt-1">
-                            Each role has different permissions. Try switching roles via the topbar after login.
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-emerald-500 text-[14px] icon-fill">language</span> SOC-2 ready
+                        </div>
                     </div>
                 </div>
             </div>

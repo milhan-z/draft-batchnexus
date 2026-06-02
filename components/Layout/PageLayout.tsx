@@ -76,14 +76,17 @@ export const PageLayout = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-background text-on-background font-body antialiased">
+        <div className="h-screen w-full bg-slate-50 text-slate-900 font-body antialiased">
             <Sidebar />
-            <TopBar />
-            <main className="flex-1 md:ml-64 p-4 md:p-8 md:w-[calc(100%-16rem)] overflow-x-hidden pb-24 md:pb-8">
-                <div className="max-w-[1440px] mx-auto w-full">
-                    {children}
-                </div>
-            </main>
+            {/* Content column is offset by the fixed sidebar width on md+ screens */}
+            <div className="flex flex-col h-screen md:ml-64 min-w-0">
+                <TopBar />
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 xl:p-8 pb-24 md:pb-8 scroll-smooth">
+                    <div className="max-w-[1440px] mx-auto w-full">
+                        {children}
+                    </div>
+                </main>
+            </div>
             <MobileNav />
         </div>
     );

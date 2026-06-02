@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { PageHeader } from "@/components/shared/PageHeader";
 
 const COLD_CHAIN = [
     { zone: "AMB-A", name: "Ambient storage", range: "15°C to 30°C", policy: "No flammable", note: "Standard dry goods" },
@@ -35,12 +36,14 @@ const DISPATCH_POLICY = [
 
 function Section({ icon, title, subtitle, children }: { icon: string; title: string; subtitle: string; children: React.ReactNode }) {
     return (
-        <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-outline-variant bg-surface-container-low flex items-start gap-3">
-                <span className="material-symbols-outlined text-primary icon-fill">{icon}</span>
+        <div className="ui-card overflow-hidden">
+            <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 grid place-items-center shrink-0">
+                    <span className="material-symbols-outlined icon-fill text-[20px]">{icon}</span>
+                </span>
                 <div>
-                    <h3 className="font-bold text-sm">{title}</h3>
-                    <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>
+                    <h3 className="font-semibold text-sm text-slate-900">{title}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
                 </div>
             </div>
             <div className="p-5">{children}</div>
@@ -52,35 +55,36 @@ export default function PolicyRulesPage() {
     const [activeHazard, setActiveHazard] = useState<string | null>(null);
 
     return (
-        <div className="flex flex-col gap-6">
-            <div>
-                <h2 className="font-display font-bold text-3xl text-primary">Policy Rules</h2>
-                <p className="text-on-surface-variant mt-1">Enforced rules for cold-chain, hazard segregation, QC release, and dispatch. Every recommendation in BatchNexus is checked against these policies.</p>
-            </div>
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <PageHeader
+                icon="gavel"
+                title="Policy Rules"
+                subtitle="Enforced rules for cold-chain, hazard segregation, QC release, and dispatch. Every recommendation in BatchNexus is checked against these policies."
+            />
 
             {/* Cold-chain */}
             <Section icon="thermostat" title="Cold-chain & Zone Policy" subtitle="Temperature ranges and hazard policy per warehouse zone">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant border-b border-outline-variant">
+                        <thead className="text-[11px] uppercase tracking-wide font-semibold text-slate-500 border-b border-slate-100">
                             <tr>
-                                <th className="py-2 pr-4">Zone</th>
-                                <th className="py-2 pr-4">Name</th>
-                                <th className="py-2 pr-4">Temp Range</th>
-                                <th className="py-2 pr-4">Hazard Policy</th>
-                                <th className="py-2">Notes</th>
+                                <th className="py-2.5 pr-4">Zone</th>
+                                <th className="py-2.5 pr-4">Name</th>
+                                <th className="py-2.5 pr-4">Temp Range</th>
+                                <th className="py-2.5 pr-4">Hazard Policy</th>
+                                <th className="py-2.5">Notes</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-outline-variant/30">
+                        <tbody className="divide-y divide-slate-100">
                             {COLD_CHAIN.map(z => (
-                                <tr key={z.zone} className="hover:bg-surface-container-low transition-colors">
-                                    <td className="py-3 pr-4 font-mono font-bold text-primary">{z.zone}</td>
-                                    <td className="py-3 pr-4">{z.name}</td>
-                                    <td className="py-3 pr-4 font-mono">{z.range}</td>
+                                <tr key={z.zone} className="hover:bg-slate-50/70 transition-colors">
+                                    <td className="py-3 pr-4 font-mono font-semibold text-emerald-700">{z.zone}</td>
+                                    <td className="py-3 pr-4 text-slate-900">{z.name}</td>
+                                    <td className="py-3 pr-4 font-mono text-slate-600">{z.range}</td>
                                     <td className="py-3 pr-4">
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${z.policy === "Flammable allowed" ? "bg-amber-100 text-amber-800" : "bg-surface-variant text-on-surface-variant"}`}>{z.policy}</span>
+                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${z.policy === "Flammable allowed" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-slate-100 text-slate-600 border-slate-200"}`}>{z.policy}</span>
                                     </td>
-                                    <td className="py-3 text-xs text-on-surface-variant">{z.note}</td>
+                                    <td className="py-3 text-xs text-slate-500">{z.note}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -94,7 +98,7 @@ export default function PolicyRulesPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-center text-sm">
                             <thead>
-                                <tr className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
+                                <tr className="text-[11px] uppercase tracking-wide font-semibold text-slate-500">
                                     <th className="py-2 px-2 text-left"></th>
                                     {HAZARD_CLASSES.map(h => <th key={h} className="py-2 px-2">{h}</th>)}
                                 </tr>
@@ -105,14 +109,14 @@ export default function PolicyRulesPage() {
                                         key={rowH}
                                         onMouseEnter={() => setActiveHazard(rowH)}
                                         onMouseLeave={() => setActiveHazard(null)}
-                                        className={activeHazard === rowH ? "bg-primary/5" : ""}
+                                        className={`transition-colors ${activeHazard === rowH ? "bg-emerald-50/60" : ""}`}
                                     >
-                                        <td className="py-2 px-2 text-left text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">{rowH}</td>
+                                        <td className="py-2 px-2 text-left text-[11px] uppercase tracking-wide font-semibold text-slate-500">{rowH}</td>
                                         {HAZARD_CLASSES.map(colH => {
                                             const ok = HAZARD_MATRIX[rowH][colH];
                                             return (
                                                 <td key={colH} className="py-2 px-2">
-                                                    <span className={`material-symbols-outlined text-[18px] ${ok ? "text-secondary" : "text-error"}`}>
+                                                    <span className={`material-symbols-outlined text-[18px] ${ok ? "text-emerald-500" : "text-rose-500"}`}>
                                                         {ok ? "check_circle" : "block"}
                                                     </span>
                                                 </td>
@@ -123,9 +127,9 @@ export default function PolicyRulesPage() {
                             </tbody>
                         </table>
                     </div>
-                    <p className="text-[10px] text-on-surface-variant mt-3 flex items-center gap-3">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-secondary">check_circle</span> Compatible</span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-error">block</span> Blocked by policy</span>
+                    <p className="text-[11px] text-slate-500 mt-3 flex items-center gap-3">
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-emerald-500">check_circle</span> Compatible</span>
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-rose-500">block</span> Blocked by policy</span>
                     </p>
                 </Section>
 
@@ -134,12 +138,12 @@ export default function PolicyRulesPage() {
                     <ul className="space-y-3">
                         {QC_POLICY.map((p, i) => (
                             <li key={i} className="flex items-start gap-3">
-                                <span className={`material-symbols-outlined text-[18px] mt-0.5 ${p.severity === "ok" ? "text-secondary" : p.severity === "warn" ? "text-amber-500" : "text-error"}`}>
+                                <span className={`material-symbols-outlined text-[18px] mt-0.5 ${p.severity === "ok" ? "text-emerald-500" : p.severity === "warn" ? "text-amber-500" : "text-rose-500"}`}>
                                     {p.severity === "ok" ? "check_circle" : p.severity === "warn" ? "info" : "block"}
                                 </span>
                                 <div>
-                                    <p className="text-sm font-bold">{p.rule}</p>
-                                    <p className="text-xs text-on-surface-variant">{p.action}</p>
+                                    <p className="text-sm font-semibold text-slate-900">{p.rule}</p>
+                                    <p className="text-xs text-slate-500">{p.action}</p>
                                 </div>
                             </li>
                         ))}
@@ -151,18 +155,18 @@ export default function PolicyRulesPage() {
             <Section icon="send" title="Dispatch Requirements" subtitle="Conditions a lot must satisfy before it can be dispatched">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {DISPATCH_POLICY.map((d, i) => (
-                        <div key={i} className="bg-surface-container-low border border-outline-variant rounded-lg p-4">
-                            <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1">{d.rule}</p>
-                            <p className="text-sm">{d.req}</p>
+                        <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                            <p className="micro-label mb-1">{d.rule}</p>
+                            <p className="text-sm text-slate-800">{d.req}</p>
                         </div>
                     ))}
                 </div>
             </Section>
 
-            <div className="bg-primary-container/30 border border-primary/20 rounded-xl p-4 flex items-start gap-3">
-                <span className="material-symbols-outlined text-primary icon-fill">verified_user</span>
-                <p className="text-xs text-on-surface-variant">
-                    These policies are enforced across Inbound, QC, Warehouse, and Dispatch. When a recommendation violates a rule (for example, a flammable material in COLD-B), the action is blocked and the reason is shown. Every enforced decision is recorded in the <span className="font-bold text-primary">Audit Log</span>.
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50/50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-emerald-600 icon-fill">verified_user</span>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                    These policies are enforced across Inbound, QC, Warehouse, and Dispatch. When a recommendation violates a rule (for example, a flammable material in COLD-B), the action is blocked and the reason is shown. Every enforced decision is recorded in the <span className="font-semibold text-emerald-700">Audit Log</span>.
                 </p>
             </div>
         </div>

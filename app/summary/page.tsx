@@ -3,6 +3,9 @@ import { useState } from "react";
 import { fetchItems, createItem } from "@/lib/api/client";
 import { useRole, canGenerateSummary, getActorName } from "@/lib/rbac";
 import { notifications } from "@mantine/notifications";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/States";
+import { RadialGauge } from "@/components/shared/Charts";
 
 interface ModuleKPI {
     label: string;
@@ -230,90 +233,108 @@ export default function AISummaryPage() {
         URL.revokeObjectURL(url);
     };
 
-    const statusColor = (s: string) => s === "critical" ? "text-error" : s === "warning" ? "text-amber-600" : "text-secondary";
-    const statusBg = (s: string) => s === "critical" ? "bg-error-container/20 border-error/20" : s === "warning" ? "bg-amber-50 border-amber-200" : "bg-secondary-container/20 border-secondary/20";
-    const severityColor = (s: string) => s === "danger" ? "bg-error-container/20 border-error/30" : s === "warn" ? "bg-amber-50 border-amber-200" : "bg-surface-container-low border-outline-variant";
+    const statusColor = (s: string) => s === "critical" ? "text-rose-600" : s === "warning" ? "text-amber-600" : "text-emerald-600";
+    const statusBg = (s: string) => s === "critical" ? "bg-rose-50 border-rose-200" : s === "warning" ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200";
+    const severityColor = (s: string) => s === "danger" ? "bg-rose-50 border-rose-200" : s === "warn" ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200";
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-end flex-wrap gap-4">
-                <div>
-                    <h2 className="font-display font-bold text-3xl text-primary">AI Operations Summary</h2>
-                    <p className="text-on-surface-variant mt-1">Manager-ready daily report with KPIs, module status, and action items.</p>
-                </div>
-                <div className="flex gap-3">
-                    {result && (
-                        <button onClick={handleExport} className="border border-outline-variant bg-white font-bold py-3 px-5 rounded-sm text-xs uppercase tracking-widest hover:border-primary hover:text-primary transition-colors flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[16px]">download</span> Export
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <PageHeader
+                icon="summarize"
+                title="AI Operations Summary"
+                subtitle="Manager-ready daily report with KPIs, module status, and action items."
+                actions={
+                    <>
+                        {result && (
+                            <button onClick={handleExport} className="btn btn-secondary">
+                                <span className="material-symbols-outlined text-[18px]">download</span>
+                                <span className="hidden sm:inline">Export</span>
+                            </button>
+                        )}
+                        <button
+                            onClick={handleGenerate}
+                            disabled={loading || !hasPermission}
+                            className="btn btn-primary"
+                        >
+                            {loading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">auto_awesome</span>}
+                            Generate Summary
                         </button>
-                    )}
-                    <button
-                        onClick={handleGenerate}
-                        disabled={loading || !hasPermission}
-                        className={`font-bold py-3 px-6 rounded-sm text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm
-                            ${hasPermission ? "bg-primary text-on-primary hover:opacity-90" : "bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed"}`}
-                    >
-                        {loading ? <span className="material-symbols-outlined animate-spin text-[16px]">sync</span> : <span className="material-symbols-outlined text-[16px]">auto_awesome</span>}
-                        Generate Summary
-                    </button>
-                </div>
-            </div>
+                    </>
+                }
+            />
 
             {!hasPermission && (
-                <div className="bg-error-container/20 border border-error/20 text-on-error-container p-4 rounded-xl flex items-center gap-3">
+                <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-center gap-3">
                     <span className="material-symbols-outlined">lock</span>
                     <p className="text-sm">Your role ({role}) does not have permission to generate summaries. Switch to Operations Manager.</p>
                 </div>
             )}
 
             {!result && !loading && hasPermission && (
-                <div className="bg-surface-container-low border border-outline-variant rounded-xl flex flex-col items-center justify-center min-h-[300px] text-on-surface-variant gap-4">
-                    <span className="material-symbols-outlined text-5xl opacity-50">summarize</span>
-                    <p className="text-sm">Click &ldquo;Generate Summary&rdquo; to produce a manager-ready daily report.</p>
+                <div className="ui-card">
+                    <EmptyState
+                        icon="summarize"
+                        title="No report generated yet"
+                        description="Click &ldquo;Generate Summary&rdquo; to produce a manager-ready daily report from live operational records."
+                    />
                 </div>
             )}
 
             {loading && (
-                <div className="bg-surface-container-low border border-outline-variant rounded-xl flex flex-col items-center justify-center min-h-[300px] text-on-surface-variant gap-4">
-                    <span className="material-symbols-outlined animate-spin text-4xl text-primary">sync</span>
-                    <p className="text-sm font-bold uppercase tracking-widest">Analyzing operational records...</p>
+                <div className="ui-card flex flex-col items-center justify-center min-h-[300px] text-slate-500 gap-4">
+                    <span className="material-symbols-outlined animate-spin text-4xl text-emerald-600">progress_activity</span>
+                    <p className="text-sm font-medium">Analyzing operational records...</p>
                 </div>
             )}
 
             {result && !loading && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-6 animate-rise">
                     {/* KPI Row */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        {result.kpis.map((kpi, i) => (
-                            <div key={i} className="bg-white rounded-xl border border-outline-variant p-4 text-center shadow-sm">
-                                <span className="material-symbols-outlined text-primary text-[20px] mb-1">{kpi.icon}</span>
-                                <p className="font-mono font-bold text-xl text-on-surface">{kpi.value}</p>
-                                <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mt-1">{kpi.label}</p>
-                            </div>
-                        ))}
+                        {result.kpis.map((kpi, i) => {
+                            const isPct = typeof kpi.value === "string" && kpi.value.endsWith("%");
+                            const pctVal = isPct ? parseInt(kpi.value as string) : 0;
+                            const gaugeColor = pctVal >= 80 ? "#059669" : pctVal >= 50 ? "#0ea5e9" : "#d97706";
+                            return (
+                                <div key={i} className="ui-card ui-card-hover p-4 flex flex-col items-center text-center">
+                                    {isPct ? (
+                                        <RadialGauge value={pctVal} size={68} stroke={7} color={gaugeColor}
+                                            label={<span className="text-base font-bold text-slate-900">{kpi.value}</span>} />
+                                    ) : (
+                                        <div className="w-[68px] h-[68px] grid place-items-center">
+                                            <div className="text-center">
+                                                <span className="material-symbols-outlined text-emerald-600 text-[22px]">{kpi.icon}</span>
+                                                <p className="font-mono font-bold text-xl text-slate-900 leading-none mt-1">{kpi.value}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <p className="micro-label mt-2">{kpi.label}</p>
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Module Status */}
                         <div className="lg:col-span-2 space-y-4">
-                            <h3 className="font-bold text-sm flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-[18px]">dashboard</span>
+                            <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-emerald-600 text-[18px]">dashboard</span>
                                 Module Status
                             </h3>
                             {result.sections.map((sec, i) => (
                                 <div key={i} className={`rounded-xl border p-5 ${statusBg(sec.status)}`}>
                                     <div className="flex items-center gap-3 mb-3">
                                         <span className={`material-symbols-outlined ${statusColor(sec.status)}`}>{sec.icon}</span>
-                                        <h4 className="font-bold text-sm flex-1">{sec.module}</h4>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${sec.status === "critical" ? "bg-error text-on-error" : sec.status === "warning" ? "bg-amber-200 text-amber-800" : "bg-secondary-container text-on-secondary-container"}`}>
+                                        <h4 className="font-semibold text-sm text-slate-900 flex-1">{sec.module}</h4>
+                                        <span className={`text-[11px] font-semibold capitalize px-2 py-0.5 rounded-full ${sec.status === "critical" ? "bg-rose-600 text-white" : sec.status === "warning" ? "bg-amber-200 text-amber-900" : "bg-emerald-600 text-white"}`}>
                                             {sec.status}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-on-surface-variant mb-2">{sec.summary}</p>
+                                    <p className="text-sm text-slate-600 mb-2">{sec.summary}</p>
                                     <ul className="space-y-1">
                                         {sec.details.map((d, j) => (
-                                            <li key={j} className="text-xs text-on-surface-variant flex items-start gap-1.5">
-                                                <span className="material-symbols-outlined text-[12px] mt-0.5 opacity-60">chevron_right</span>
+                                            <li key={j} className="text-xs text-slate-600 flex items-start gap-1.5">
+                                                <span className="material-symbols-outlined text-[14px] mt-px text-slate-400">chevron_right</span>
                                                 {d}
                                             </li>
                                         ))}
@@ -325,44 +346,44 @@ export default function AISummaryPage() {
                         {/* Right: Attention + Recommendations */}
                         <div className="space-y-6">
                             <div>
-                                <h3 className="font-bold text-sm flex items-center gap-2 mb-3">
-                                    <span className="material-symbols-outlined text-error text-[18px]">priority_high</span>
+                                <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2 mb-3">
+                                    <span className="material-symbols-outlined text-rose-600 text-[18px]">priority_high</span>
                                     Attention Required
                                 </h3>
                                 <div className="space-y-3">
                                     {result.attentionItems.length === 0 ? (
-                                        <p className="text-xs text-on-surface-variant bg-surface-container-low p-4 rounded-xl border border-outline-variant text-center">No items require attention.</p>
+                                        <p className="text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">No items require attention.</p>
                                     ) : result.attentionItems.map((item, i) => (
                                         <div key={i} className={`p-4 rounded-xl border ${severityColor(item.severity)}`}>
-                                            <p className="text-sm font-bold">{item.title}</p>
-                                            <p className="text-xs text-on-surface-variant mt-1">{item.detail}</p>
-                                            {item.entity && <p className="text-[10px] font-mono text-primary mt-1">{item.entity}</p>}
+                                            <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                                            <p className="text-xs text-slate-600 mt-1">{item.detail}</p>
+                                            {item.entity && <p className="text-[11px] font-mono text-emerald-700 mt-1">{item.entity}</p>}
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
                             <div>
-                                <h3 className="font-bold text-sm flex items-center gap-2 mb-3">
-                                    <span className="material-symbols-outlined text-secondary text-[18px]">lightbulb</span>
+                                <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2 mb-3">
+                                    <span className="material-symbols-outlined text-teal-600 text-[18px]">lightbulb</span>
                                     Recommendations
                                 </h3>
-                                <div className="bg-white rounded-xl border border-outline-variant p-4 space-y-2">
+                                <div className="ui-card p-4 space-y-2.5">
                                     {result.recommendations.map((rec, i) => (
-                                        <div key={i} className="flex items-start gap-2 text-xs">
-                                            <span className="material-symbols-outlined text-secondary text-[14px] mt-0.5">arrow_right</span>
+                                        <div key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                                            <span className="material-symbols-outlined text-teal-600 text-[16px] mt-px">arrow_right</span>
                                             <p>{rec}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="bg-surface-container-low rounded-xl border border-outline-variant p-4">
-                                <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-2">Report Metadata</p>
-                                <p className="text-xs text-on-surface-variant">Generated: {result.generatedAt}</p>
-                                <p className="text-xs text-on-surface-variant mt-1">Sources: {result.sources.join(", ")}</p>
-                                <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[12px]">history_edu</span> Audit-logged
+                            <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                                <p className="micro-label mb-2">Report Metadata</p>
+                                <p className="text-xs text-slate-500">Generated: {result.generatedAt}</p>
+                                <p className="text-xs text-slate-500 mt-1">Sources: {result.sources.join(", ")}</p>
+                                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[13px]">history_edu</span> Audit-logged
                                 </p>
                             </div>
                         </div>

@@ -19,7 +19,7 @@ interface Props {
  */
 export function TemperatureChart({ readings, min, max, height = 120, label }: Props) {
     if (!readings || readings.length === 0) {
-        return <p className="text-xs text-on-surface-variant">No temperature readings.</p>;
+        return <p className="text-xs text-slate-500">No temperature readings.</p>;
     }
 
     const w = 320;
@@ -48,7 +48,7 @@ export function TemperatureChart({ readings, min, max, height = 120, label }: Pr
 
     return (
         <div>
-            {label && <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-2">{label}</p>}
+            {label && <p className="micro-label mb-2">{label}</p>}
             <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: h }}>
                 {/* Safe range band */}
                 <rect
@@ -82,8 +82,8 @@ export function TemperatureChart({ readings, min, max, height = 120, label }: Pr
                 })}
             </svg>
             <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-on-surface-variant">{readings.length} readings</span>
-                <span className={`text-[11px] font-mono font-bold ${lastOut ? "text-error" : "text-secondary"}`}>
+                <span className="text-[10px] text-slate-500">{readings.length} readings</span>
+                <span className={`text-[11px] font-mono font-bold ${lastOut ? "text-rose-600" : "text-emerald-600"}`}>
                     Current {last.temperature_c}°C {lastOut ? "⚠ out of range" : "✓ in range"}
                 </span>
             </div>

@@ -54,49 +54,61 @@ export default function CopilotPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto w-full">
-            <div className="mb-6">
-                <h2 className="font-display font-bold text-3xl text-primary">Ops Copilot</h2>
-                <p className="text-on-surface-variant mt-1">AI-assisted natural language queries for manufacturing operations.</p>
+        <div className="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto w-full animate-fade-in">
+            <div className="mb-5">
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:grid place-items-center w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+                        <span className="material-symbols-outlined text-[22px] icon-fill">smart_toy</span>
+                    </div>
+                    <div>
+                        <h1 className="text-2xl text-slate-900 font-semibold tracking-tight">Ops Copilot</h1>
+                        <p className="text-slate-500 text-sm mt-0.5">AI-assisted natural language queries for manufacturing operations.</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex-1 bg-white border border-outline-variant rounded-xl shadow-sm flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 ui-card flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto soft-scroll p-6 space-y-5">
                     {messages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] rounded-2xl p-5 ${msg.role === 'user' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface border border-outline-variant'}`}>
-                                <div className="flex items-center gap-2 mb-2 opacity-80">
-                                    <span className="material-symbols-outlined text-[16px]">
+                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-rise`}>
+                            <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${msg.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    <span className="material-symbols-outlined text-[18px]">
                                         {msg.role === 'user' ? 'person' : 'smart_toy'}
                                     </span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                                        {msg.role === 'user' ? 'You' : 'Ops Copilot'}
-                                    </span>
                                 </div>
-                                <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                    {msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')}
+                                <div className={`rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-slate-50 text-slate-800 border border-slate-200 rounded-tl-sm'}`}>
+                                    <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                                        {msg.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ))}
                     {isLoading && (
-                        <div className="flex justify-start">
-                            <div className="bg-surface-container-low text-on-surface border border-outline-variant rounded-2xl p-5 flex items-center gap-3">
-                                <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-                                <span className="text-xs font-bold uppercase tracking-widest opacity-70 animate-pulse">Thinking...</span>
+                        <div className="flex justify-start animate-rise">
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 grid place-items-center shrink-0">
+                                    <span className="material-symbols-outlined text-[18px]">smart_toy</span>
+                                </div>
+                                <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3.5 flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                <div className="p-4 border-t border-outline-variant bg-surface-container-lowest">
-                    <div className="flex flex-wrap gap-2 mb-4">
+                <div className="p-4 border-t border-slate-100 bg-slate-50/60">
+                    <div className="flex flex-wrap gap-2 mb-3">
                         {suggestedPrompts.map((p, i) => (
                             <button
                                 key={i}
                                 onClick={(e) => handleSend(e, p)}
                                 disabled={isLoading}
-                                className="px-3 py-1.5 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors bg-white disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50/50 transition-colors bg-white disabled:opacity-50"
                             >
                                 {p}
                             </button>
@@ -105,7 +117,7 @@ export default function CopilotPage() {
                     <form id="copilot-form" onSubmit={handleSend} className="flex gap-2">
                         <input
                             type="text"
-                            className="flex-1 bg-white border border-outline-variant rounded-lg px-4 py-3 text-sm focus:border-primary focus:ring-1"
+                            className="field flex-1 h-12"
                             placeholder="Ask about a lot, material, receipt, warehouse..."
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
@@ -114,7 +126,7 @@ export default function CopilotPage() {
                         <button
                             type="submit"
                             disabled={!input.trim() || isLoading}
-                            className="bg-primary text-on-primary w-12 h-12 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50"
+                            className="bg-emerald-600 text-white w-12 h-12 rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-colors disabled:opacity-50 shrink-0"
                         >
                             <span className="material-symbols-outlined">send</span>
                         </button>

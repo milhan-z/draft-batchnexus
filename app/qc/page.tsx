@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { fetchItems, updateItem, createItem } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { AIRecommendationCard } from "@/components/shared/AIRecommendationCard";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { useRole, canApproveQC, getActorName } from "@/lib/rbac";
-import { VisualQCAnalyzer } from "@/components/shared/VisualQCAnalyzer";
-import type { VisionQCResult } from "@/lib/visionQC";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/States";
+import { Progress } from "@/components/shared/Charts";
+import { analyseImageFile, referenceFor, type VisionQCResult } from "@/lib/visionQC";
 import { notifications } from "@mantine/notifications";
 
 export default function QCStationPage() {
@@ -20,6 +21,13 @@ export default function QCStationPage() {
     const [blockProcessing, setBlockProcessing] = useState(false);
     const [recheckProcessing, setRecheckProcessing] = useState(false);
     const [visionResult, setVisionResult] = useState<VisionQCResult | null>(null);
+
+    // Image capture / analysis
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [showGolden, setShowGolden] = useState(false);
+    const fileRef = useRef<HTMLInputElement>(null);
+    const cameraRef = useRef<HTMLInputElement>(null);
 
     // Lookups
     const [materials, setMaterials] = useState<Map<string, any>>(new Map());
@@ -60,7 +68,34 @@ export default function QCStationPage() {
     // Clear any captured vision analysis when switching to another task.
     useEffect(() => {
         setVisionResult(null);
+        setImageUrl(null);
+        setShowGolden(false);
     }, [selectedTask?.id]);
+
+    const handleImageFile = async (file: File) => {
+        if (!selectedTask) return;
+        setAnalyzing(true);
+        try {
+            const reference = referenceFor(materials.get(selectedTask.material_id)?.category);
+            const [{ result, dataUrl }] = await Promise.all([
+                analyseImageFile(file, reference),
+                new Promise((r) => setTimeout(r, 650)),
+            ]) as [{ result: VisionQCResult; dataUrl: string }, unknown];
+            setImageUrl(dataUrl);
+            setVisionResult(result);
+        } catch (e) {
+            console.error("Visual QC failed", e);
+            notifications.show({ title: "Analysis failed", message: "Could not analyse this image. Try a different photo.", color: "red" });
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
+    const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) handleImageFile(file);
+        e.target.value = "";
+    };
 
     const getMaterialName = (id: string | any) => {
         if (typeof id === 'object' && id?.name) return id.name;
@@ -234,41 +269,55 @@ export default function QCStationPage() {
     const hasPermission = canApproveQC(role);
 
     return (
-        <div className="flex flex-col gap-6">
-            <div>
-                <h2 className="font-display font-bold text-3xl text-primary">QC Release Station</h2>
-                <p className="text-on-surface-variant mt-1">Review AI scores and provide human sign-off for material release.</p>
-            </div>
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <PageHeader
+                icon="biotech"
+                title="QC Release Station"
+                subtitle="Review AI scores and provide human sign-off for material release."
+                badge={!loading && (
+                    <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        {pendingTasks.filter(t => t.status === "Pending QC").length} pending
+                    </span>
+                )}
+            />
 
             <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left: Queue */}
-                <div className="w-full lg:w-80 flex flex-col bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden h-[35vh] lg:h-auto">
-                    <div className="p-4 border-b border-outline-variant bg-surface-container flex items-center justify-between shrink-0 z-10">
-                        <h3 className="font-bold text-sm">Inspection Queue</h3>
-                        <span className="bg-primary text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingTasks.filter(t => t.status === "Pending QC").length} Pending</span>
+                <div className="w-full lg:w-80 flex flex-col ui-card overflow-hidden h-[35vh] lg:h-auto lg:max-h-[calc(100vh-12rem)]">
+                    <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0 z-10">
+                        <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px] text-slate-400">checklist</span>
+                            Inspection Queue
+                        </h3>
+                        <span className="bg-emerald-600 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">{pendingTasks.filter(t => t.status === "Pending QC").length}</span>
                     </div>
                     <div className="flex-1 relative">
-                        <div className="absolute inset-0 overflow-y-auto p-4 space-y-3">
+                        <div className="absolute inset-0 overflow-y-auto soft-scroll p-3 space-y-2">
                         {loading ? (
-                            <div className="flex justify-center p-8"><span className="material-symbols-outlined animate-spin text-primary">sync</span></div>
-                        ) : pendingTasks.length === 0 ? (
-                            <div className="text-center p-8 text-on-surface-variant opacity-70">
-                                <span className="material-symbols-outlined text-4xl mb-2">inbox</span>
-                                <p className="text-xs">No pending QC tasks.</p>
+                            <div className="space-y-2">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div key={i} className="p-4 rounded-xl border border-slate-100 space-y-2">
+                                        <div className="flex justify-between"><div className="skeleton h-3 w-16" /><div className="skeleton h-5 w-16 rounded-full" /></div>
+                                        <div className="skeleton h-4 w-28" />
+                                        <div className="skeleton h-3 w-20" />
+                                    </div>
+                                ))}
                             </div>
+                        ) : pendingTasks.length === 0 ? (
+                            <EmptyState icon="task_alt" title="Queue is clear" description="No pending QC tasks right now." />
                         ) : (
                             pendingTasks.map(task => (
                                 <button
                                     key={task.id}
                                     onClick={() => setSelectedTask(task)}
-                                    className={`w-full text-left p-4 rounded-lg border transition-all ${selectedTask?.id === task.id ? 'bg-primary-container border-primary shadow-sm' : 'bg-white border-outline-variant hover:border-primary/50'}`}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all ${selectedTask?.id === task.id ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200' : 'bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50/60'}`}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className="font-mono text-xs text-outline font-bold">{task.receipt_no}</span>
+                                    <div className="flex justify-between items-start mb-1.5 gap-2">
+                                        <span className="font-mono text-[11px] text-slate-500 font-medium">{task.receipt_no}</span>
                                         <StatusBadge status={task.status} />
                                     </div>
-                                    <p className="font-bold text-sm line-clamp-1">{getMaterialName(task.material_id)}</p>
-                                    <p className="text-xs text-on-surface-variant line-clamp-1">{getSupplierName(task.supplier_id)}</p>
+                                    <p className="font-semibold text-sm text-slate-900 line-clamp-1">{getMaterialName(task.material_id)}</p>
+                                    <p className="text-xs text-slate-500 line-clamp-1">{getSupplierName(task.supplier_id)}</p>
                                 </button>
                             ))
                         )}
@@ -278,197 +327,249 @@ export default function QCStationPage() {
 
                 {/* Right: Details + Analysis in vertical flow */}
                 {!selectedTask ? (
-                    <div className="flex-1 bg-white rounded-xl border border-outline-variant flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant opacity-50">
-                        <span className="material-symbols-outlined text-6xl mb-4">biotech</span>
-                        <p>Select a task from the queue to begin inspection.</p>
+                    <div className="flex-1 ui-card flex flex-col items-center justify-center min-h-[400px]">
+                        <EmptyState icon="biotech" title="No task selected" description="Select a task from the queue to begin inspection." />
                     </div>
-                ) : (
+                ) : (() => {
+                    const scores = getAIScores(selectedTask.id);
+                    const conf = visionResult ? visionResult.confidence : scores.confidence;
+                    const colour = visionResult ? visionResult.colourScore : scores.colorScore;
+                    const uniformity = visionResult ? visionResult.consistency : 88 + (scores.colorScore % 10);
+                    const defectRisk = visionResult ? visionResult.defectRisk : scores.defectRisk;
+                    const foreignRisk = visionResult ? visionResult.foreignMatterRisk : scores.foreignRisk;
+                    const recommendation = visionResult ? visionResult.recommendation : "Pass with human review";
+                    const reference = referenceFor(materials.get(selectedTask.material_id)?.category);
+                    const riskPct = (r: string) => r === "Low" ? 12 : r === "Medium" ? 55 : 88;
+                    const recTone = recommendation === "Pass" ? "text-emerald-700"
+                        : recommendation.startsWith("Pass") ? "text-amber-600" : "text-rose-600";
+                    const isInspectable = selectedTask.status === "Pending QC" || selectedTask.status === "QC Released";
+                    return (
                     <div className="flex-1 flex flex-col gap-6 overflow-y-auto">
-                        {/* Material Info Card */}
-                        <div className="bg-white rounded-xl border border-outline-variant p-6 shadow-sm">
-                            <h3 className="font-display font-bold text-2xl text-primary mb-4">{getMaterialName(selectedTask.material_id)}</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1">Receipt Number</p>
-                                    <p className="font-mono font-bold text-sm">{selectedTask.receipt_no}</p>
+                        {/* Material header card with capture controls */}
+                        <div className="ui-card p-5">
+                            <div className="flex flex-col sm:flex-row items-start gap-5">
+                                {/* Sample thumbnail */}
+                                <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 grid place-items-center">
+                                    {imageUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={imageUrl} alt="QC sample" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="material-symbols-outlined text-slate-300 text-4xl">image</span>
+                                    )}
+                                    {analyzing && (
+                                        <div className="absolute inset-0 bg-white/70 backdrop-blur-sm grid place-items-center">
+                                            <span className="material-symbols-outlined animate-spin text-emerald-600 text-2xl">progress_activity</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1">Supplier</p>
-                                    <p className="font-bold text-sm">{getSupplierName(selectedTask.supplier_id)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1">Quantity</p>
-                                    <p className="font-bold text-sm">{selectedTask.quantity} {selectedTask.unit}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant mb-1">Batch Reference</p>
-                                    <p className="font-mono text-sm">{selectedTask.batch_reference || "—"}</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 bg-surface-container-low p-4 rounded-lg border border-outline-variant">
-                                <h4 className="font-bold text-sm mb-2">Storage Requirements</h4>
-                                <div className="flex gap-6">
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-secondary text-sm">thermostat</span>
-                                        <span className="text-xs">{selectedTask.temperature_requirement || "Ambient"}</span>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-slate-900">{getMaterialName(selectedTask.material_id)}</h3>
+                                            <p className="text-sm text-slate-500">{getSupplierName(selectedTask.supplier_id)} · {selectedTask.quantity} {selectedTask.unit}</p>
+                                        </div>
+                                        <StatusBadge status={selectedTask.status} />
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-error text-sm">warning</span>
-                                        <span className="text-xs">{selectedTask.hazard_class || "Normal"}</span>
+
+                                    {/* Meta chips */}
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-xs font-mono">
+                                            <span className="material-symbols-outlined text-[14px]">receipt_long</span>{selectedTask.receipt_no}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 bg-sky-50 border border-sky-100 text-sky-700 px-2.5 py-1 rounded-lg text-xs font-medium">
+                                            <span className="material-symbols-outlined text-[14px]">thermostat</span>{selectedTask.temperature_requirement || "Ambient"}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-medium">
+                                            <span className="material-symbols-outlined text-[14px]">warning</span>{selectedTask.hazard_class || "Normal"}
+                                        </span>
                                     </div>
+
+                                    {/* Capture controls */}
+                                    {isInspectable && (
+                                        <div className="flex flex-wrap gap-2 mt-4">
+                                            <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickImage} />
+                                            <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={onPickImage} />
+                                            <button onClick={() => cameraRef.current?.click()} disabled={analyzing} className="btn btn-secondary text-xs disabled:opacity-50">
+                                                <span className="material-symbols-outlined text-[16px]">photo_camera</span> Capture
+                                            </button>
+                                            <button onClick={() => fileRef.current?.click()} disabled={analyzing} className="btn btn-secondary text-xs disabled:opacity-50">
+                                                <span className="material-symbols-outlined text-[16px]">image</span> Upload
+                                            </button>
+                                            {reference && (
+                                                <button onClick={() => setShowGolden(s => !s)} className="btn btn-secondary text-xs">
+                                                    <span className="material-symbols-outlined text-[16px]">visibility</span> {showGolden ? "Hide" : "View"} golden sample
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {showGolden && reference && (
+                                        <div className="mt-3 flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-3 animate-rise">
+                                            <span className="w-10 h-10 rounded-lg border border-slate-200 shrink-0" style={{ backgroundColor: reference.hex }} />
+                                            <div className="text-xs">
+                                                <p className="font-semibold text-slate-800">Golden reference</p>
+                                                <p className="text-slate-500 font-mono">{reference.hex} · target colour profile</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* QC Analysis — Vertical Flow */}
-                        {(selectedTask.status === "Pending QC" || selectedTask.status === "QC Released") && (
-                            <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-                                <div className="p-5 border-b border-outline-variant bg-surface-container-low flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-primary">analytics</span>
-                                    <h3 className="font-bold text-sm">QC Analysis</h3>
-                                    <span className="ml-auto text-[10px] font-bold uppercase tracking-widest bg-primary/10 text-primary px-2 py-0.5 rounded-full">AI-Assisted</span>
-                                </div>
-
-                                <div className="p-6 space-y-6">
-                                    {/* AI Recommendation Card */}
-                                    <AIRecommendationCard 
-                                        title="Visual & Organoleptic AI"
-                                        recommendation={visionResult ? visionResult.recommendation : "Pass with human review"}
-                                        confidence={visionResult ? visionResult.confidence : getAIScores(selectedTask.id).confidence}
-                                        reasonCodes={visionResult ? visionResult.reasonCodes.map(rc => rc.replace(/^⚠\s*/, "")) : [
-                                            "Colour is within expected range",
-                                            "No visible dark spots detected",
-                                            "Texture appears consistent"
-                                        ]}
-                                        humanReviewNote="AI supports the first inspection layer. Final release must be approved by QC staff."
-                                        icon="biotech"
-                                    />
-
-                                    {/* Metrics Row */}
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant text-center">
-                                            <p className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1">Colour Score</p>
-                                            <p className="font-mono font-bold text-primary text-xl">{visionResult ? visionResult.colourScore : getAIScores(selectedTask.id).colorScore}<span className="text-sm opacity-60">/100</span></p>
+                        {/* Vision QC recommendation */}
+                        {isInspectable && (
+                            <div className="relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/40 p-5">
+                                <div className="absolute -top-16 -right-12 w-44 h-44 bg-emerald-500/10 rounded-full blur-2xl" />
+                                <div className="relative flex items-center justify-between gap-3 mb-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white grid place-items-center shadow-sm">
+                                            <span className="material-symbols-outlined text-[20px] icon-fill">auto_awesome</span>
                                         </div>
-                                        <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant text-center">
-                                            <p className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1">Defect Risk</p>
-                                            <p className={`font-bold text-lg ${(visionResult ? visionResult.defectRisk : getAIScores(selectedTask.id).defectRisk) === 'Low' ? 'text-secondary' : 'text-error'}`}>
-                                                {visionResult ? visionResult.defectRisk : getAIScores(selectedTask.id).defectRisk}
-                                            </p>
-                                        </div>
-                                        <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant text-center">
-                                            <p className="text-[10px] uppercase tracking-widest font-bold opacity-70 mb-1">Foreign Matter</p>
-                                            <p className={`font-bold text-lg ${(visionResult ? visionResult.foreignMatterRisk : getAIScores(selectedTask.id).foreignRisk) === 'Low' ? 'text-secondary' : 'text-error'}`}>
-                                                {visionResult ? visionResult.foreignMatterRisk : getAIScores(selectedTask.id).foreignRisk}
-                                            </p>
+                                        <div>
+                                            <div className="font-semibold text-emerald-900">Vision QC recommendation</div>
+                                            <div className="text-xs text-emerald-700/80">{visionResult ? "Computer vision · on-device" : "Awaiting sample image · showing baseline"}</div>
                                         </div>
                                     </div>
-
-                                    {/* Visual QC Analyzer — full width, not cramped */}
-                                    <VisualQCAnalyzer
-                                        materialCategory={materials.get(selectedTask.material_id)?.category}
-                                        materialName={getMaterialName(selectedTask.material_id)}
-                                        onResult={setVisionResult}
-                                    />
+                                    <div className="text-right">
+                                        <div className={`text-3xl font-semibold leading-none ${recTone}`}>{recommendation === "Block Material" ? "Block" : recommendation === "Pass" ? "Pass" : "Review"}</div>
+                                        <div className="text-xs text-emerald-600 mt-1">{conf}% confidence</div>
+                                    </div>
                                 </div>
+
+                                {/* Metric tiles with progress */}
+                                <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                    {[
+                                        { label: "Colour score", value: `${colour}`, pct: colour, color: "bg-emerald-500" },
+                                        { label: "Uniformity", value: `${uniformity}`, pct: uniformity, color: "bg-emerald-500" },
+                                        { label: "Defect risk", value: defectRisk, pct: 100 - riskPct(defectRisk), color: defectRisk === "Low" ? "bg-emerald-500" : defectRisk === "Medium" ? "bg-amber-500" : "bg-rose-500" },
+                                        { label: "Foreign matter", value: foreignRisk, pct: 100 - riskPct(foreignRisk), color: foreignRisk === "Low" ? "bg-emerald-500" : foreignRisk === "Medium" ? "bg-amber-500" : "bg-rose-500" },
+                                        { label: "ΔColour (vs golden)", value: visionResult?.colourDelta != null ? `${visionResult.colourDelta}` : "—", pct: visionResult?.colourDelta != null ? Math.max(0, 100 - visionResult.colourDelta) : 70, color: "bg-emerald-500" },
+                                    ].map(m => (
+                                        <div key={m.label} className="bg-white rounded-xl p-3 border border-emerald-100">
+                                            <div className="text-[10px] text-slate-500 uppercase tracking-wide leading-tight">{m.label}</div>
+                                            <div className="text-xl text-slate-900 tabular-nums font-semibold mt-1">{m.value}</div>
+                                            <Progress value={m.pct} className="h-1 mt-1.5" color={m.color} />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Reason codes */}
+                                <div className="relative bg-white/70 rounded-lg p-3 border border-emerald-100 text-xs text-emerald-900 mt-4">
+                                    <div className="flex items-start gap-2">
+                                        <span className="material-symbols-outlined text-[15px] mt-px">info</span>
+                                        <div>
+                                            <span className="font-semibold">Reason codes: </span>
+                                            {visionResult
+                                                ? visionResult.reasonCodes.map(rc => rc.replace(/^⚠\s*/, "")).join(" · ")
+                                                : "Colour within golden range · Low defect signal · No foreign-matter outliers detected. Recommend release with optional human spot-check."}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="relative text-[11px] text-emerald-700/80 mt-3 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[14px]">person</span>
+                                    AI assists the first inspection layer. Final release must be approved by QC staff.
+                                </p>
                             </div>
                         )}
 
-                        {selectedTask.status !== "Pending QC" && selectedTask.status !== "QC Released" && (
-                            <div className="bg-white rounded-xl border border-outline-variant p-6 text-center text-on-surface-variant">
-                                <span className="material-symbols-outlined text-3xl opacity-50 mb-2">info</span>
-                                <p className="text-sm">No AI data available for this status.</p>
+                        {!isInspectable && (
+                            <div className="ui-card">
+                                <EmptyState icon="info" title="No AI data available" description="There is no AI inspection data for this status." />
                             </div>
                         )}
 
                         {/* Human Decision Panel */}
                         {selectedTask.status === "Pending QC" && (() => {
-                            const scores = getAIScores(selectedTask.id);
-                            const conf = visionResult ? visionResult.confidence : scores.confidence;
-                            const fmRisk = visionResult ? visionResult.foreignMatterRisk : scores.foreignRisk;
                             const isLowConfidence = conf < 70;
                             const isReviewRecommended = conf >= 70 && conf < 85;
-                            const isForeignHigh = fmRisk === "High";
+                            const isForeignHigh = foreignRisk === "High";
                             const shouldBlockApprove = isLowConfidence || isForeignHigh;
                             return (
-                            <div className="bg-white rounded-xl border border-outline-variant p-6 shadow-sm">
-                                {/* Confidence Policy Warnings */}
+                            <div className="ui-card p-5">
+                                <div className="mb-4">
+                                    <h4 className="text-sm font-semibold text-slate-900">Human decision</h4>
+                                    <p className="text-xs text-slate-500 mt-0.5">Final release is always human-approved and audit-logged.</p>
+                                </div>
+
+                                {/* Policy warnings */}
                                 {isLowConfidence && (
-                                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex items-start gap-2">
-                                        <span className="material-symbols-outlined text-[16px] mt-0.5">error</span>
+                                    <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-800 p-3.5 rounded-xl text-xs flex items-start gap-2.5">
+                                        <span className="material-symbols-outlined text-[18px] mt-px">error</span>
                                         <div>
-                                            <p className="font-bold">Re-inspection Required</p>
-                                            <p>AI confidence {conf}% is below 70%. Human re-inspection is mandatory before approval.</p>
+                                            <p className="font-semibold">Re-inspection Required</p>
+                                            <p className="text-rose-700/90 mt-0.5">AI confidence {conf}% is below 70%. Human re-inspection is mandatory before approval.</p>
                                         </div>
                                     </div>
                                 )}
                                 {isReviewRecommended && (
-                                    <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2">
-                                        <span className="material-symbols-outlined text-[16px] mt-0.5">warning</span>
+                                    <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl text-xs flex items-start gap-2.5">
+                                        <span className="material-symbols-outlined text-[18px] mt-px">warning</span>
                                         <div>
-                                            <p className="font-bold">Review Recommended</p>
-                                            <p>AI confidence {conf}% is between 70-84%. Thorough manual review recommended before approval.</p>
+                                            <p className="font-semibold">Review Recommended</p>
+                                            <p className="text-amber-700/90 mt-0.5">AI confidence {conf}% is between 70-84%. Thorough manual review recommended before approval.</p>
                                         </div>
                                     </div>
                                 )}
                                 {isForeignHigh && (
-                                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex items-start gap-2">
-                                        <span className="material-symbols-outlined text-[16px] mt-0.5">gpp_bad</span>
+                                    <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-800 p-3.5 rounded-xl text-xs flex items-start gap-2.5">
+                                        <span className="material-symbols-outlined text-[18px] mt-px">gpp_bad</span>
                                         <div>
-                                            <p className="font-bold">Foreign Matter Risk: High</p>
-                                            <p>Material is flagged for possible contamination. Approval is blocked per policy.</p>
+                                            <p className="font-semibold">Foreign Matter Risk: High</p>
+                                            <p className="text-rose-700/90 mt-0.5">Material is flagged for possible contamination. Approval is blocked per policy.</p>
                                         </div>
                                     </div>
                                 )}
-                                <p className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant text-center mb-4">Human Decision</p>
-                                <div className="space-y-3 max-w-md mx-auto">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <button 
                                         onClick={() => setShowConfirm(true)}
                                         disabled={!hasPermission || shouldBlockApprove}
-                                        className={`w-full font-bold py-4 rounded-sm text-sm uppercase tracking-widest transition-all flex justify-center items-center gap-2
-                                            ${hasPermission && !shouldBlockApprove ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
+                                        className={`font-semibold py-3 rounded-xl text-sm transition-all flex justify-center items-center gap-2
+                                            ${hasPermission && !shouldBlockApprove ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                     >
-                                        <span className="material-symbols-outlined">verified</span>
-                                        Approve Release
+                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                        Approve
                                     </button>
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={handleRecheck}
-                                            disabled={!hasPermission || recheckProcessing}
-                                            className="flex-1 border border-outline-variant bg-white font-bold py-3 rounded-sm text-xs uppercase tracking-widest text-on-surface hover:bg-surface-container-low transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
-                                        >
-                                            {recheckProcessing ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : <span className="material-symbols-outlined text-sm">replay</span>}
-                                            Recheck
-                                        </button>
-                                        <button
-                                            onClick={() => setShowBlockConfirm(true)}
-                                            disabled={!hasPermission || blockProcessing}
-                                            className="flex-1 border border-error/50 text-error bg-error-container/10 font-bold py-3 rounded-sm text-xs uppercase tracking-widest hover:bg-error-container transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">block</span>
-                                            Block
-                                        </button>
-                                    </div>
-                                    {!hasPermission && (
-                                        <p className="text-xs text-error mt-2 text-center">Your role ({role}) cannot approve QC.</p>
-                                    )}
-                                    {shouldBlockApprove && hasPermission && (
-                                        <p className="text-xs text-error mt-2 text-center">Approval blocked by policy. Use Recheck or Block.</p>
-                                    )}
-                                    <p className="text-[10px] text-center text-outline mt-2">This decision will be recorded in the audit log.</p>
+                                    <button
+                                        onClick={handleRecheck}
+                                        disabled={!hasPermission || recheckProcessing}
+                                        className="border border-amber-200 text-amber-700 bg-amber-50/60 font-semibold py-3 rounded-xl text-sm hover:bg-amber-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                    >
+                                        {recheckProcessing ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">replay</span>}
+                                        Recheck
+                                    </button>
+                                    <button
+                                        onClick={() => setShowBlockConfirm(true)}
+                                        disabled={!hasPermission || blockProcessing}
+                                        className="border border-rose-200 text-rose-600 bg-rose-50/60 font-semibold py-3 rounded-xl text-sm hover:bg-rose-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">block</span>
+                                        Block
+                                    </button>
                                 </div>
+                                {!hasPermission && (
+                                    <p className="text-xs text-rose-600 mt-3 text-center">Your role ({role}) cannot approve QC.</p>
+                                )}
+                                {shouldBlockApprove && hasPermission && (
+                                    <p className="text-xs text-rose-600 mt-3 text-center">Approval blocked by policy. Use Recheck or Block.</p>
+                                )}
+                                <p className="text-[11px] text-center text-slate-400 mt-3 flex items-center justify-center gap-1">
+                                    <span className="material-symbols-outlined text-[13px]">history_edu</span>
+                                    This decision will be recorded in the audit log.
+                                </p>
                             </div>
                             );
                         })()}
                         
                         {selectedTask.status !== "Pending QC" && (
-                            <div className="bg-surface-container-highest p-4 rounded-lg flex items-center justify-center gap-2">
-                                <span className="material-symbols-outlined text-primary">lock</span>
-                                <p className="text-xs font-bold">Record locked (Status: {selectedTask.status})</p>
+                            <div className="bg-slate-100 border border-slate-200 p-4 rounded-xl flex items-center justify-center gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-[18px]">lock</span>
+                                <p className="text-xs font-medium">Record locked (Status: {selectedTask.status})</p>
                             </div>
                         )}
                     </div>
-                )}
+                    );
+                })()}
             </div>
 
             <ConfirmModal 

@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { fetchItems } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState, Spinner } from "@/components/shared/States";
 
 export default function LotsTraceabilityPage() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -94,11 +96,11 @@ export default function LotsTraceabilityPage() {
             : "—";
 
         const events: { title: string; time: string; desc: string; icon: string; iconColor: string; badge?: string; highlight?: boolean }[] = [
-            { title: "Supplier doc received", time: fmt(receipt?.arrival_time || receipt?.date_created), desc: `Initial documentation received from ${supplierName}.`, icon: "mail", iconColor: "text-on-surface-variant bg-surface-container-highest" },
-            { title: "AI extraction completed", time: fmt(receipt?.date_created), desc: `Data extracted automatically via AI Copilot. ${materialName} fields with ${conf}% confidence.`, icon: "auto_awesome", iconColor: "text-secondary bg-secondary-container" },
-            { title: "Receipt submitted to QC", time: fmt(receipt?.date_created), desc: "Intake complete. Material pending QC inspection.", icon: "send", iconColor: "text-on-surface-variant bg-surface-container-highest" },
-            { title: "QC review completed", time: fmt(selectedLot.released_at), desc: "Approved for processing. Visual & organoleptic AI screening passed.", icon: "biotech", iconColor: "text-secondary bg-secondary-container" },
-            { title: "Lot number issued", time: fmt(selectedLot.released_at), desc: `Material officially converted into tracked Lot ID: ${selectedLot.lot_number}. ERP records updated.`, icon: "tag", iconColor: "text-primary bg-primary-container", highlight: true },
+            { title: "Supplier doc received", time: fmt(receipt?.arrival_time || receipt?.date_created), desc: `Initial documentation received from ${supplierName}.`, icon: "mail", iconColor: "text-slate-500 bg-slate-100" },
+            { title: "AI extraction completed", time: fmt(receipt?.date_created), desc: `Data extracted automatically via AI Copilot. ${materialName} fields with ${conf}% confidence.`, icon: "auto_awesome", iconColor: "text-teal-600 bg-teal-50" },
+            { title: "Receipt submitted to QC", time: fmt(receipt?.date_created), desc: "Intake complete. Material pending QC inspection.", icon: "send", iconColor: "text-slate-500 bg-slate-100" },
+            { title: "QC review completed", time: fmt(selectedLot.released_at), desc: "Approved for processing. Visual & organoleptic AI screening passed.", icon: "biotech", iconColor: "text-teal-600 bg-teal-50" },
+            { title: "Lot number issued", time: fmt(selectedLot.released_at), desc: `Material officially converted into tracked Lot ID: ${selectedLot.lot_number}. ERP records updated.`, icon: "tag", iconColor: "text-emerald-600 bg-emerald-50", highlight: true },
         ];
 
         if (["Stored", "In Dispatch", "Dispatched"].includes(selectedLot.status) && selectedLot.current_location) {
@@ -107,7 +109,7 @@ export default function LotsTraceabilityPage() {
                 time: fmt(selectedLot.date_created),
                 desc: `Drums moved to climate-controlled storage zone, slot ${selectedLot.current_location}. Temperature logged.`,
                 icon: "warehouse",
-                iconColor: "text-on-surface-variant bg-surface-container-highest",
+                iconColor: "text-slate-500 bg-slate-100",
                 badge: selectedLot.current_location,
             });
         }
@@ -119,38 +121,38 @@ export default function LotsTraceabilityPage() {
                 time: fmt(d.date_created),
                 desc: `${d.quantity_sample || 1} sample dispatched to ${d.customer_name} (${d.destination}). Awaiting client feedback.`,
                 icon: "local_shipping",
-                iconColor: "text-secondary bg-secondary-container",
+                iconColor: "text-teal-600 bg-teal-50",
                 badge: d.id,
             });
         });
 
         return (
             <div>
-                <h4 className="font-bold text-sm mb-6 text-on-surface-variant">Lifecycle Timeline</h4>
+                <h4 className="micro-label mb-6">Lifecycle Timeline</h4>
                 <div className="relative">
                     {/* Vertical line */}
-                    <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-outline-variant/60"></div>
+                    <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-slate-200"></div>
 
                     <div className="space-y-0">
                         {events.map((ev, i) => (
                             <div key={i} className="relative flex gap-4 pb-8 last:pb-0">
                                 {/* Icon circle */}
-                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ev.iconColor} ${ev.highlight ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+                                <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ev.iconColor} ${ev.highlight ? "ring-2 ring-emerald-500 ring-offset-2" : ""}`}>
                                     <span className="material-symbols-outlined text-[18px]">{ev.icon}</span>
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 pt-1">
                                     <div className="flex items-start justify-between gap-3 mb-1">
-                                        <h5 className={`font-bold text-sm ${ev.highlight ? "text-primary" : "text-on-surface"}`}>{ev.title}</h5>
+                                        <h5 className={`font-semibold text-sm ${ev.highlight ? "text-emerald-700" : "text-slate-900"}`}>{ev.title}</h5>
                                         <div className="flex items-center gap-2 shrink-0">
                                             {ev.badge && (
-                                                <span className="font-mono text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">{ev.badge}</span>
+                                                <span className="font-mono text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">{ev.badge}</span>
                                             )}
-                                            <time className="text-[10px] font-mono text-on-surface-variant whitespace-nowrap">{ev.time}</time>
+                                            <time className="text-[10px] font-mono text-slate-400 whitespace-nowrap">{ev.time}</time>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-on-surface-variant leading-relaxed">{ev.desc}</p>
+                                    <p className="text-xs text-slate-500 leading-relaxed">{ev.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -161,52 +163,51 @@ export default function LotsTraceabilityPage() {
     };
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <h2 className="font-display font-bold text-3xl text-primary">Lot Traceability Timeline</h2>
-                        {!loading && <span className="bg-primary text-on-primary text-[10px] font-bold px-2.5 py-1 rounded-full">{lots.length} Active</span>}
-                    </div>
-                    <p className="text-on-surface-variant mt-1">End-to-end operational visibility from inbound receipt to outbound dispatch.</p>
-                </div>
-            </div>
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <PageHeader
+                icon="inventory_2"
+                title="Lot Traceability Timeline"
+                subtitle="End-to-end operational visibility from inbound receipt to outbound dispatch."
+                badge={!loading && (
+                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        {lots.length} active
+                    </span>
+                )}
+            />
 
             <div className="flex flex-col lg:flex-row flex-1 gap-6 lg:min-h-0">
                 {/* Left: Lot List */}
-                <div className="w-full lg:w-1/3 flex flex-col bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden max-h-[35vh] lg:max-h-none">
-                    <div className="p-4 border-b border-outline-variant bg-surface-container sticky top-0 z-10">
+                <div className="w-full lg:w-1/3 flex flex-col ui-card overflow-hidden max-h-[35vh] lg:max-h-[calc(100vh-11rem)]">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50/70 sticky top-0 z-10">
                         <div className="relative">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-                            <input 
-                                type="text" 
-                                placeholder="Search lot number..." 
-                                className="w-full pl-9 pr-4 py-2 bg-white border border-outline-variant rounded-md text-sm focus:border-primary focus:ring-1"
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                            <input
+                                type="text"
+                                placeholder="Search lot number, material..."
+                                className="field pl-9 h-10"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="flex-1 overflow-y-auto soft-scroll p-3 space-y-2">
                         {loading ? (
-                            <div className="flex justify-center p-8"><span className="material-symbols-outlined animate-spin text-primary">sync</span></div>
+                            <Spinner label="Loading lots..." />
                         ) : filteredLots.length === 0 ? (
-                            <div className="text-center p-8 text-on-surface-variant opacity-70">
-                                <p className="text-xs">No lots found.</p>
-                            </div>
+                            <EmptyState icon="search_off" title="No lots found" description="Try a different search term." />
                         ) : (
                             filteredLots.map(lot => (
                                 <button
                                     key={lot.id}
                                     onClick={() => setSelectedLot(lot)}
-                                    className={`w-full text-left p-4 rounded-lg border transition-all ${selectedLot?.id === lot.id ? 'bg-primary-container border-primary shadow-sm' : 'bg-white border-outline-variant hover:border-primary/50'}`}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all ${selectedLot?.id === lot.id ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200' : 'bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50/60'}`}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className="font-mono text-sm font-bold text-primary">{lot.lot_number}</span>
+                                    <div className="flex justify-between items-start mb-1.5 gap-2">
+                                        <span className="font-mono text-sm font-semibold text-emerald-700">{lot.lot_number}</span>
                                         <StatusBadge status={lot.status} />
                                     </div>
-                                    <p className="font-bold text-sm line-clamp-1">{getMaterialName(lot.material_id)}</p>
-                                    <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mt-1">{getSupplierName((lot.receipt_id || lot.source_receipt_id))}</p>
+                                    <p className="font-semibold text-sm text-slate-900 line-clamp-1">{getMaterialName(lot.material_id)}</p>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">{getSupplierName((lot.receipt_id || lot.source_receipt_id))}</p>
                                 </button>
                             ))
                         )}
@@ -214,48 +215,47 @@ export default function LotsTraceabilityPage() {
                 </div>
 
                 {/* Right: Tracing Details */}
-                <div className="w-full lg:w-2/3 flex flex-col bg-white rounded-xl border border-outline-variant overflow-hidden shadow-sm min-h-[60vh] lg:min-h-0">
+                <div className="w-full lg:w-2/3 flex flex-col ui-card overflow-hidden min-h-[60vh] lg:min-h-0">
                     {!selectedLot ? (
-                        <div className="flex flex-col items-center justify-center h-full text-on-surface-variant opacity-50">
-                            <span className="material-symbols-outlined text-6xl mb-4">timeline</span>
-                            <p>Select a lot to view full traceability.</p>
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <EmptyState icon="timeline" title="No lot selected" description="Select a lot to view its full traceability timeline." />
                         </div>
                     ) : (
                         <div className="flex flex-col h-full">
                             {/* Header with Lot Summary */}
-                            <div className="p-6 border-b border-outline-variant bg-surface-container-lowest">
+                            <div className="p-6 border-b border-slate-100 bg-slate-50/40">
                                 <div className="flex flex-col lg:flex-row gap-6">
                                     {/* Left: Lot title */}
                                     <div className="flex-1">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <h3 className="font-display font-bold text-3xl text-primary">{selectedLot.lot_number}</h3>
+                                        <div className="flex items-start justify-between mb-2 gap-3">
+                                            <h3 className="font-display font-semibold text-3xl text-slate-900">{selectedLot.lot_number}</h3>
                                             <StatusBadge status={selectedLot.status} />
                                         </div>
-                                        <p className="text-sm font-bold text-on-surface">{getMaterialName(selectedLot.material_id)}</p>
-                                        <p className="text-xs text-on-surface-variant mt-1">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)}</p>
+                                        <p className="text-sm font-semibold text-slate-800">{getMaterialName(selectedLot.material_id)}</p>
+                                        <p className="text-xs text-slate-500 mt-1">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)}</p>
                                     </div>
                                     {/* Right: Summary card */}
-                                    <div className="lg:w-64 bg-white rounded-xl border border-outline-variant p-4 space-y-2.5">
-                                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Lot Summary</h4>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-on-surface-variant">Material</span>
-                                            <span className="font-bold text-right">{getMaterialName(selectedLot.material_id)}</span>
+                                    <div className="lg:w-64 bg-white rounded-xl border border-slate-200 p-4 space-y-2.5">
+                                        <h4 className="micro-label mb-2">Lot Summary</h4>
+                                        <div className="flex justify-between text-xs items-center">
+                                            <span className="text-slate-500">Material</span>
+                                            <span className="font-medium text-right text-slate-900">{getMaterialName(selectedLot.material_id)}</span>
                                         </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-on-surface-variant">QC Decision</span>
+                                        <div className="flex justify-between text-xs items-center">
+                                            <span className="text-slate-500">QC Decision</span>
                                             <StatusBadge status={selectedLot.status === "Blocked" ? "Blocked" : "QC Released"} />
                                         </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-on-surface-variant">Location</span>
-                                            <span className="font-mono font-bold text-primary">{selectedLot.current_location || "—"}</span>
+                                        <div className="flex justify-between text-xs items-center">
+                                            <span className="text-slate-500">Location</span>
+                                            <span className="font-mono font-semibold text-emerald-700">{selectedLot.current_location || "—"}</span>
                                         </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-on-surface-variant">Dispatches</span>
-                                            <span className="font-bold">{dispatches.filter(d => d.lot_id === selectedLot.id).length} linked</span>
+                                        <div className="flex justify-between text-xs items-center">
+                                            <span className="text-slate-500">Dispatches</span>
+                                            <span className="font-medium text-slate-900">{dispatches.filter(d => d.lot_id === selectedLot.id).length} linked</span>
                                         </div>
-                                        <div className="pt-2 border-t border-outline-variant/50 space-y-2">
+                                        <div className="pt-2.5 border-t border-slate-100 space-y-2">
                                             <button
-                                                className="w-full text-left bg-primary text-on-primary px-3 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2"
+                                                className="btn btn-primary w-full text-xs"
                                                 onClick={() => {
                                                     // Export trace report
                                                     const lot = selectedLot;
@@ -276,14 +276,14 @@ export default function LotsTraceabilityPage() {
                                                     URL.revokeObjectURL(url);
                                                 }}
                                             >
-                                                <span className="material-symbols-outlined text-[14px]">download</span>
+                                                <span className="material-symbols-outlined text-[16px]">download</span>
                                                 Export Trace Report
                                             </button>
                                             <button
-                                                className="w-full text-left border border-outline-variant bg-white px-3 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:border-primary hover:text-primary transition-colors flex items-center gap-2"
+                                                className="btn btn-secondary w-full text-xs"
                                                 onClick={() => setActiveTab("audit log")}
                                             >
-                                                <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                                                <span className="material-symbols-outlined text-[16px]">history_edu</span>
                                                 Open Audit Log
                                             </button>
                                         </div>
@@ -291,55 +291,55 @@ export default function LotsTraceabilityPage() {
                                 </div>
                             </div>
                             
-                            <div className="flex border-b border-outline-variant bg-surface-container-low px-2">
+                            <div className="flex border-b border-slate-100 bg-white px-3 gap-1 overflow-x-auto">
                                 {['traceability', 'overview', 'qc data', 'audit log'].map(tab => (
                                     <button 
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
-                                        className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors border-b-2 ${activeTab === tab ? 'border-primary text-primary bg-white' : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/30'}`}
+                                        className={`px-4 py-3 text-xs font-semibold capitalize transition-colors border-b-2 whitespace-nowrap ${activeTab === tab ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                                     >
                                         {tab}
                                     </button>
                                 ))}
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 bg-surface-container-lowest">
+                            <div className="flex-1 overflow-y-auto soft-scroll p-6 bg-slate-50/30">
                                 {activeTab === 'traceability' && renderTraceabilityTimeline()}
                                 
                                 {activeTab === 'overview' && (
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div className="space-y-4">
-                                            <h4 className="font-bold text-sm border-b pb-2">Material Origin</h4>
+                                            <h4 className="font-semibold text-sm text-slate-900 border-b border-slate-100 pb-2">Material Origin</h4>
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold opacity-70">Supplier</p>
-                                                <p className="font-bold text-sm">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id))}</p>
+                                                <p className="micro-label">Supplier</p>
+                                                <p className="font-semibold text-sm text-slate-900">{getSupplierName((selectedLot.receipt_id || selectedLot.source_receipt_id))}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold opacity-70">Source Receipt</p>
-                                                <p className="font-mono text-sm">{getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.receipt_no}</p>
+                                                <p className="micro-label">Source Receipt</p>
+                                                <p className="font-mono text-sm text-slate-700">{getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.receipt_no}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold opacity-70">Quantity</p>
-                                                <p className="text-sm font-bold">{selectedLot.quantity} {getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.unit}</p>
+                                                <p className="micro-label">Quantity</p>
+                                                <p className="text-sm font-semibold text-slate-900">{selectedLot.quantity} {getReceipt((selectedLot.receipt_id || selectedLot.source_receipt_id))?.unit}</p>
                                             </div>
                                         </div>
                                         <div className="space-y-4">
-                                            <h4 className="font-bold text-sm border-b pb-2">Current State</h4>
+                                            <h4 className="font-semibold text-sm text-slate-900 border-b border-slate-100 pb-2">Current State</h4>
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold opacity-70">Location</p>
-                                                <p className="font-mono font-bold text-primary text-sm">{selectedLot.current_location || "Awaiting Slot"}</p>
+                                                <p className="micro-label">Location</p>
+                                                <p className="font-mono font-semibold text-emerald-700 text-sm">{selectedLot.current_location || "Awaiting Slot"}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold opacity-70">Related Dispatches</p>
-                                                <div className="mt-1 space-y-2">
+                                                <p className="micro-label">Related Dispatches</p>
+                                                <div className="mt-1.5 space-y-2">
                                                     {dispatches.filter(d => d.lot_id === selectedLot.id).map(dsp => (
-                                                        <div key={dsp.id} className="bg-surface-container-low p-2 rounded border border-outline-variant flex justify-between items-center">
-                                                            <span className="font-mono text-xs font-bold">{dsp.id}</span>
-                                                            <span className="text-[10px] uppercase tracking-widest">{dsp.customer_name}</span>
+                                                        <div key={dsp.id} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex justify-between items-center">
+                                                            <span className="font-mono text-xs font-semibold text-slate-700">{dsp.id}</span>
+                                                            <span className="text-[11px] text-slate-500">{dsp.customer_name}</span>
                                                         </div>
                                                     ))}
                                                     {dispatches.filter(d => d.lot_id === selectedLot.id).length === 0 && (
-                                                        <span className="text-xs opacity-50">None</span>
+                                                        <span className="text-xs text-slate-400">None</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -350,54 +350,51 @@ export default function LotsTraceabilityPage() {
                                 {activeTab === 'qc data' && (
                                     <div className="max-w-xl">
                                         {qc.filter(q => q.receipt_id === ((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)).map(q => (
-                                            <div key={q.id} className="bg-surface-container-low border border-outline-variant p-5 rounded-xl space-y-4">
-                                                <div className="flex justify-between items-center border-b pb-3">
-                                                    <span className="font-mono font-bold">{q.id}</span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest bg-primary-container text-primary px-2 py-1 rounded">{q.human_decision || "—"}</span>
+                                            <div key={q.id} className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-4">
+                                                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                                                    <span className="font-mono font-semibold text-slate-700">{q.id}</span>
+                                                    <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">{q.human_decision || "—"}</span>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <p className="text-[10px] uppercase font-bold opacity-70">AI Recommendation</p>
-                                                        <p className="text-sm font-bold">{q.recommendation || "—"}</p>
+                                                        <p className="micro-label">AI Recommendation</p>
+                                                        <p className="text-sm font-semibold text-slate-900">{q.recommendation || "—"}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] uppercase font-bold opacity-70">Confidence</p>
-                                                        <p className="text-sm font-bold">{typeof q.confidence === "number" ? `${Math.round(q.confidence * 100)}%` : "—"}</p>
+                                                        <p className="micro-label">Confidence</p>
+                                                        <p className="text-sm font-semibold text-slate-900">{typeof q.confidence === "number" ? `${Math.round(q.confidence * 100)}%` : "—"}</p>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-2">
-                                                    <div className="bg-white p-2 rounded text-center">
-                                                        <p className="text-[10px] uppercase font-bold opacity-70">Colour</p>
-                                                        <p className="font-mono font-bold text-primary">{typeof q.colour_score === "number" ? `${q.colour_score}/100` : "—"}</p>
+                                                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">
+                                                        <p className="micro-label">Colour</p>
+                                                        <p className="font-mono font-bold text-emerald-700">{typeof q.colour_score === "number" ? `${q.colour_score}/100` : "—"}</p>
                                                     </div>
-                                                    <div className="bg-white p-2 rounded text-center">
-                                                        <p className="text-[10px] uppercase font-bold opacity-70">Defect</p>
-                                                        <p className="font-bold">{q.defect_risk || "—"}</p>
+                                                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">
+                                                        <p className="micro-label">Defect</p>
+                                                        <p className="font-semibold text-slate-900">{q.defect_risk || "—"}</p>
                                                     </div>
-                                                    <div className="bg-white p-2 rounded text-center">
-                                                        <p className="text-[10px] uppercase font-bold opacity-70">Foreign</p>
-                                                        <p className="font-bold">{q.foreign_matter_risk || "—"}</p>
+                                                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">
+                                                        <p className="micro-label">Foreign</p>
+                                                        <p className="font-semibold text-slate-900">{q.foreign_matter_risk || "—"}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                         {qc.filter(q => q.receipt_id === ((selectedLot.receipt_id || selectedLot.source_receipt_id) || selectedLot.receipt_id)).length === 0 && (
-                                            <div className="text-center py-8 text-on-surface-variant opacity-70">
-                                                <span className="material-symbols-outlined text-3xl mb-2 opacity-50">science</span>
-                                                <p className="text-sm">No QC records found for this lot.</p>
-                                            </div>
+                                            <EmptyState icon="science" title="No QC records found" description="There are no QC inspection records for this lot." />
                                         )}
                                     </div>
                                 )}
 
                                 {activeTab === 'audit log' && (
-                                    <div className="space-y-2">
+                                    <div className="space-y-1">
                                         {audits.filter(a => a.entity === selectedLot.id || a.entity === (selectedLot.receipt_id || selectedLot.source_receipt_id) || a.entity.includes('QC-') || a.entity.includes('REC-') || a.change_detail?.includes(selectedLot.lot_number)).map(a => (
-                                            <div key={a.id} className="text-xs p-3 border-b flex gap-4 hover:bg-surface-container-low transition-colors rounded">
-                                                <div className="w-32 font-mono opacity-70 shrink-0">{new Date(a.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                                <div className="w-40 font-bold shrink-0">{a.actor}</div>
-                                                <div className="w-48 text-primary font-bold uppercase tracking-widest text-[10px] mt-0.5 shrink-0">{a.action}</div>
-                                                <div className="flex-1 opacity-80">{a.change_detail}</div>
+                                            <div key={a.id} className="text-xs p-3 rounded-lg flex flex-col sm:flex-row gap-1 sm:gap-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                                                <div className="w-32 font-mono text-slate-400 shrink-0">{new Date(a.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                                <div className="w-40 font-medium text-slate-900 shrink-0">{a.actor}</div>
+                                                <div className="w-48 text-emerald-700 font-semibold text-[11px] shrink-0">{a.action}</div>
+                                                <div className="flex-1 text-slate-600">{a.change_detail}</div>
                                             </div>
                                         ))}
                                     </div>

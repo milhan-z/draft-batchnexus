@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { fetchItems, createItem, updateItem } from "@/lib/api/client";
 import { notifications } from "@mantine/notifications";
 import { useRole, getActorName, canCreateDispatch } from "@/lib/rbac";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState, Spinner } from "@/components/shared/States";
 
 interface Lot {
     id: string;
@@ -60,10 +62,8 @@ export default function DispatchPage() {
                 ...l,
                 material_id: matMap.get(l.material_id) || l.material_id,
             }));
-            // Only show lots that are Ready or Stored (available for dispatch)
             setLots(merged.filter((l: Lot) => ["Ready", "Stored", "QC Released"].includes(l.status)));
 
-            // Build dispatch history
             const history: DispatchRecord[] = dispRes.data.map((d: any) => ({
                 id: d.id,
                 lot_number: d.lot_number || "—",
@@ -90,7 +90,6 @@ export default function DispatchPage() {
         const lot = lots.find(l => l.id === selectedLotId);
         if (!lot) return;
 
-        // Quantity validation
         const qty = Number(sampleQty);
         if (qty > lot.quantity) {
             notifications.show({
@@ -114,7 +113,6 @@ export default function DispatchPage() {
         setDispatching(true);
 
         try {
-            // 1. Create sample_dispatches record
             const dispatchData = {
                 lot_id: lot.id,
                 lot_number: lot.lot_number,
@@ -124,11 +122,8 @@ export default function DispatchPage() {
                 quantity_sample: Number(sampleQty),
             };
             await createItem("sample_dispatches", dispatchData);
-
-            // 2. Update lot status to "Dispatched"
             await updateItem("lots", lot.id, { status: "Dispatched" });
 
-            // 3. Audit log entry
             const actor = getActorName(role);
             await createItem("audit_logs", {
                 timestamp: new Date().toISOString(),
@@ -139,7 +134,6 @@ export default function DispatchPage() {
                 change_detail: `${Number(sampleQty)}kg of ${getMaterialName(lot.material_id)} dispatched to ${destination} by ${actor}. Status: → Dispatched.`,
             });
 
-            // 4. Update UI
             setLots(prev => prev.filter(l => l.id !== lot.id));
             setDispatches(prev => [{
                 id: crypto.randomUUID(),
@@ -151,7 +145,6 @@ export default function DispatchPage() {
                 date_created: new Date().toISOString(),
             }, ...prev]);
 
-            // Reset form
             setSelectedLotId("");
             setDestination("");
             setSampleQty("1");
@@ -174,54 +167,80 @@ export default function DispatchPage() {
         }
     };
 
+    const selectedLot = lots.find(l => l.id === selectedLotId);
+    const exportCount = dispatches.filter(d => d.destination.startsWith("Export")).length;
+    const localCount = dispatches.filter(d => d.destination.startsWith("Local")).length;
+    const totalQty = dispatches.reduce((s, d) => s + (d.quantity_sample || 0), 0);
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-32 text-on-surface-variant">
-                <span className="material-symbols-outlined animate-spin mr-3 text-3xl">sync</span>
-                Loading Dispatch Data...
+            <div className="flex flex-col gap-6 animate-fade-in">
+                <PageHeader icon="send" title="Sample Dispatch" subtitle="Outbound queue, courier coordination & customer ETAs." />
+                <div className="ui-card"><Spinner label="Loading dispatch data..." /></div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-8">
-            {/* Header */}
-            <div className="flex justify-between items-end border-b border-outline-variant pb-4">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">Outbound</span>
-                        <span className="text-xs text-secondary flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">cloud_done</span> Live from DaaS
-                        </span>
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <PageHeader
+                icon="send"
+                title="Sample Dispatch"
+                subtitle="Outbound queue, courier coordination & customer ETAs."
+                badge={
+                    <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        {exportCount} exports
+                    </span>
+                }
+            />
+
+            {/* Stat strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger">
+                {[
+                    { label: "Total dispatches", value: dispatches.length, icon: "local_shipping", tone: { bg: "bg-slate-100", fg: "text-slate-700" } },
+                    { label: "Export shipments", value: exportCount, icon: "flight_takeoff", tone: { bg: "bg-sky-100", fg: "text-sky-700" } },
+                    { label: "Local deliveries", value: localCount, icon: "near_me", tone: { bg: "bg-emerald-100", fg: "text-emerald-700" } },
+                    { label: "Total volume", value: `${totalQty}kg`, icon: "scale", tone: { bg: "bg-violet-100", fg: "text-violet-700" } },
+                ].map(s => (
+                    <div key={s.label} className="ui-card ui-card-hover p-4 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg grid place-items-center ${s.tone.bg}`}>
+                            <span className={`material-symbols-outlined text-[20px] ${s.tone.fg}`}>{s.icon}</span>
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xl font-semibold text-slate-900 tabular-nums leading-tight">{s.value}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{s.label}</p>
+                        </div>
                     </div>
-                    <h2 className="font-display font-bold text-3xl text-primary">Sample Dispatch</h2>
-                    <p className="text-on-surface-variant mt-1">Ship samples to local and export customers.</p>
-                </div>
+                ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* LEFT: Dispatch Form or Read-Only Notice */}
                 {!canCreateDispatch(role) ? (
-                    <div className="lg:col-span-5 bg-white rounded-xl border border-outline-variant p-8 shadow-sm flex flex-col items-center justify-center text-center min-h-[300px]">
-                        <span className="material-symbols-outlined text-5xl text-amber-500 mb-4">visibility</span>
-                        <h3 className="font-bold text-lg mb-2">View-Only Mode</h3>
-                        <p className="text-sm text-on-surface-variant mb-4">Your role ({role}) does not have permission to create dispatches.</p>
-                        <p className="text-xs text-on-surface-variant bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg">Contact <strong>Operations Manager</strong> to create a new dispatch.</p>
+                    <div className="lg:col-span-5 ui-card p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+                        <div className="grid place-items-center w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 mb-4">
+                            <span className="material-symbols-outlined text-[28px]">visibility</span>
+                        </div>
+                        <h3 className="font-semibold text-lg text-slate-900 mb-2">View-Only Mode</h3>
+                        <p className="text-sm text-slate-500 mb-4">Your role ({role}) does not have permission to create dispatches.</p>
+                        <p className="text-xs text-slate-600 bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg">Contact <strong>Operations Manager</strong> to create a new dispatch.</p>
                     </div>
                 ) : (
-                <div className="lg:col-span-5 bg-white rounded-xl border border-outline-variant p-8 shadow-sm">
-                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">send</span>
+                <div className="lg:col-span-5 ui-card p-6 sm:p-7 h-fit">
+                    <h3 className="font-semibold text-base text-slate-900 mb-6 flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 grid place-items-center">
+                            <span className="material-symbols-outlined text-[18px]">send</span>
+                        </span>
                         New Dispatch
                     </h3>
 
                     <div className="space-y-5">
                         <div>
-                            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Select Lot</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Lot</label>
                             <select
                                 value={selectedLotId}
                                 onChange={e => setSelectedLotId(e.target.value)}
-                                className="w-full border border-outline-variant rounded-sm p-3 text-sm focus:ring-primary focus:border-primary"
+                                className="field cursor-pointer"
                             >
                                 <option value="">Choose a lot to dispatch...</option>
                                 {lots.map(l => (
@@ -231,16 +250,19 @@ export default function DispatchPage() {
                                 ))}
                             </select>
                             {lots.length === 0 && (
-                                <p className="text-xs text-on-surface-variant mt-2">No lots available for dispatch. Complete QC and Warehouse first.</p>
+                                <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px]">info</span>
+                                    No lots available for dispatch. Complete QC and Warehouse first.
+                                </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Destination</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Destination</label>
                             <select
                                 value={destination}
                                 onChange={e => setDestination(e.target.value)}
-                                className="w-full border border-outline-variant rounded-sm p-3 text-sm focus:ring-primary focus:border-primary"
+                                className="field cursor-pointer"
                             >
                                 <option value="">Choose destination...</option>
                                 {DESTINATIONS.map(d => (
@@ -251,11 +273,11 @@ export default function DispatchPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Dispatch Type</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dispatch Type</label>
                                 <select
                                     value={dispatchType}
                                     onChange={e => setDispatchType(e.target.value)}
-                                    className="w-full border border-outline-variant rounded-sm p-3 text-sm focus:ring-primary focus:border-primary"
+                                    className="field cursor-pointer"
                                 >
                                     <option value="Sample">Sample</option>
                                     <option value="Bulk">Bulk Shipment</option>
@@ -263,43 +285,39 @@ export default function DispatchPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Sample Qty (kg)</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Sample Qty (kg)</label>
                                 <input
                                     type="number"
                                     value={sampleQty}
                                     onChange={e => setSampleQty(e.target.value)}
                                     min="1"
-                                    className="w-full border border-outline-variant rounded-sm p-3 text-sm focus:ring-primary focus:border-primary"
+                                    className="field"
                                 />
                             </div>
                         </div>
 
                         {/* Selected Lot Preview */}
-                        {selectedLotId && (() => {
-                            const lot = lots.find(l => l.id === selectedLotId);
-                            if (!lot) return null;
-                            return (
-                                <div className="bg-primary-container/30 p-4 rounded-lg border border-primary/20">
-                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Dispatch Preview</h4>
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                        <div><span className="text-outline">Lot:</span> <span className="font-bold">{lot.lot_number}</span></div>
-                                        <div><span className="text-outline">Material:</span> <span className="font-bold">{getMaterialName(lot.material_id)}</span></div>
-                                        <div><span className="text-outline">Full Qty:</span> <span className="font-bold">{lot.quantity}kg</span></div>
-                                        <div><span className="text-outline">Sample:</span> <span className="font-bold">{sampleQty}kg → {destination || "—"}</span></div>
-                                    </div>
+                        {selectedLot && (
+                            <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100 animate-rise">
+                                <h4 className="micro-label text-emerald-700 mb-2">Dispatch Preview</h4>
+                                <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-xs">
+                                    <div><span className="text-slate-500">Lot:</span> <span className="font-semibold text-slate-900">{selectedLot.lot_number}</span></div>
+                                    <div><span className="text-slate-500">Material:</span> <span className="font-semibold text-slate-900">{getMaterialName(selectedLot.material_id)}</span></div>
+                                    <div><span className="text-slate-500">Full Qty:</span> <span className="font-semibold text-slate-900">{selectedLot.quantity}kg</span></div>
+                                    <div><span className="text-slate-500">Sample:</span> <span className="font-semibold text-slate-900">{sampleQty}kg → {destination || "—"}</span></div>
                                 </div>
-                            );
-                        })()}
+                            </div>
+                        )}
 
                         <button
                             onClick={handleDispatch}
                             disabled={dispatching || !selectedLotId || !destination}
-                            className="w-full bg-primary text-on-primary font-bold py-3.5 rounded-sm text-xs uppercase tracking-widest shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+                            className="btn btn-primary w-full py-3"
                         >
                             {dispatching ? (
-                                <><span className="material-symbols-outlined animate-spin text-sm">sync</span> Processing...</>
+                                <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Processing...</>
                             ) : (
-                                <><span className="material-symbols-outlined text-sm">send</span> Dispatch Sample</>
+                                <><span className="material-symbols-outlined text-[18px]">send</span> Dispatch Sample</>
                             )}
                         </button>
                     </div>
@@ -307,46 +325,47 @@ export default function DispatchPage() {
                 )}
 
                 {/* RIGHT: Dispatch History */}
-                <div className="lg:col-span-7 bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-outline-variant">
-                        <h3 className="font-bold text-lg flex items-center gap-2">
-                            <span className="material-symbols-outlined text-outline">history</span>
-                            Dispatch History
-                        </h3>
-                        <p className="text-xs text-on-surface-variant mt-1">{dispatches.length} records from DaaS</p>
+                <div className="lg:col-span-7 ui-card overflow-hidden">
+                    <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 className="font-semibold text-base text-slate-900 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-slate-400 text-[20px]">history</span>
+                                Dispatch History
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-0.5">{dispatches.length} records from DaaS</p>
+                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-surface-container text-[10px] font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant">
-                                <tr>
-                                    <th className="px-6 py-3">Lot</th>
-                                    <th className="px-6 py-3">Material</th>
-                                    <th className="px-6 py-3">Destination</th>
-                                    <th className="px-6 py-3">Type</th>
-                                    <th className="px-6 py-3">Qty</th>
-                                    <th className="px-6 py-3">Date</th>
+                            <thead>
+                                <tr className="text-[11px] uppercase tracking-wide text-slate-500 bg-slate-50/70 border-b border-slate-100">
+                                    <th className="px-5 py-3 font-semibold">Lot</th>
+                                    <th className="px-5 py-3 font-semibold">Material</th>
+                                    <th className="px-5 py-3 font-semibold">Destination</th>
+                                    <th className="px-5 py-3 font-semibold">Type</th>
+                                    <th className="px-5 py-3 font-semibold">Qty</th>
+                                    <th className="px-5 py-3 font-semibold">Date</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-sm divide-y divide-outline-variant/30">
+                            <tbody className="text-sm">
                                 {dispatches.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-12 text-on-surface-variant">
-                                            <span className="material-symbols-outlined text-4xl block mb-2">local_shipping</span>
-                                            No dispatches yet. Send your first sample above!
+                                        <td colSpan={6}>
+                                            <EmptyState icon="local_shipping" title="No dispatches yet" description="Send your first sample using the form on the left." />
                                         </td>
                                     </tr>
                                 ) : dispatches.map((d) => (
-                                    <tr key={d.id} className="hover:bg-surface-container-low transition-colors">
-                                        <td className="px-6 py-3 font-bold text-primary">{d.lot_number}</td>
-                                        <td className="px-6 py-3">{d.material_name}</td>
-                                        <td className="px-6 py-3">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest ${d.destination.startsWith('Export') ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-surface-variant text-on-surface-variant'}`}>
+                                    <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors">
+                                        <td className="px-5 py-3.5 font-mono text-xs font-semibold text-emerald-700">{d.lot_number}</td>
+                                        <td className="px-5 py-3.5 text-slate-900">{d.material_name}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${d.destination.startsWith('Export') ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                                                 {d.destination}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-3 font-bold">{d.dispatch_type}</td>
-                                        <td className="px-6 py-3 font-mono">{d.quantity_sample}kg</td>
-                                        <td className="px-6 py-3 text-xs text-outline">{new Date(d.date_created).toLocaleDateString()}</td>
+                                        <td className="px-5 py-3.5 text-slate-700">{d.dispatch_type}</td>
+                                        <td className="px-5 py-3.5 font-mono text-slate-600 tabular-nums">{d.quantity_sample}kg</td>
+                                        <td className="px-5 py-3.5 text-xs text-slate-500">{new Date(d.date_created).toLocaleDateString()}</td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { fetchItems, createItem } from "@/lib/api/client";
 import { useRole, canSubmitToQC, getActorName } from "@/lib/rbac";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { notifications } from "@mantine/notifications";
 
 export default function InboundNewPage() {
@@ -193,69 +194,74 @@ export default function InboundNewPage() {
     };
 
     return (
-        <div className="flex flex-col gap-6 max-w-4xl">
-            <div>
-                <h2 className="font-display font-bold text-3xl text-primary">New Inbound Receipt</h2>
-                <p className="text-on-surface-variant mt-1">Register incoming raw materials. Use AI to auto-fill or enter manually.</p>
+        <div className="flex flex-col gap-6 max-w-4xl animate-fade-in">
+            <div className="flex items-center gap-3">
+                <button onClick={() => router.push("/inbound")} className="w-9 h-9 rounded-lg border border-slate-200 bg-white grid place-items-center text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors shrink-0" aria-label="Back to inbound">
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                </button>
+                <PageHeader
+                    title="New Inbound Receipt"
+                    subtitle="Register incoming raw materials. Use AI to auto-fill or enter manually."
+                />
             </div>
 
             {/* AI Assist Panel */}
-            <div className="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+            <div className="ui-card overflow-hidden">
                 <button
                     onClick={() => setShowAiPanel(!showAiPanel)}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-surface-container-low transition-colors text-left"
+                    className="w-full p-4 flex items-center gap-3 hover:bg-slate-50/70 transition-colors text-left"
                 >
-                    <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-secondary">auto_awesome</span>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm">
+                        <span className="material-symbols-outlined icon-fill text-[20px]">auto_awesome</span>
                     </div>
                     <div className="flex-1">
-                        <h3 className="font-bold text-sm">AI Auto-Fill</h3>
-                        <p className="text-xs text-on-surface-variant">Paste supplier text/WhatsApp and let AI fill the form for you</p>
+                        <h3 className="font-semibold text-sm text-slate-900">AI Auto-Fill</h3>
+                        <p className="text-xs text-slate-500">Paste supplier text/WhatsApp and let AI fill the form for you</p>
                     </div>
-                    <span className={`material-symbols-outlined text-on-surface-variant transition-transform ${showAiPanel ? "rotate-180" : ""}`}>expand_more</span>
+                    <span className={`material-symbols-outlined text-slate-400 transition-transform ${showAiPanel ? "rotate-180" : ""}`}>expand_more</span>
                 </button>
 
                 {showAiPanel && (
-                    <div className="p-4 border-t border-outline-variant bg-surface-container-lowest space-y-4">
-                        <div className="flex flex-wrap gap-2">
-                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest self-center">Try:</span>
-                            <button type="button" onClick={() => setAiText("Supplier: Java Citrus Farm\nMaterial: Citrus Peel Extract\nQuantity: 12 drums\nBatch: JCF-CIT-0526\nStorage: -20°C to -4°C, Flammable")} className="px-3 py-1 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors">
+                    <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-4 animate-rise">
+                        <div className="flex flex-wrap gap-2 items-center">
+                            <span className="micro-label self-center">Try:</span>
+                            <button type="button" onClick={() => setAiText("Supplier: Java Citrus Farm\nMaterial: Citrus Peel Extract\nQuantity: 12 drums\nBatch: JCF-CIT-0526\nStorage: -20°C to -4°C, Flammable")} className="px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors">
                                 Citrus Extract (EN)
                             </button>
-                            <button type="button" onClick={() => setAiText("tolong catat 400kg cengkeh dari Madura, tiba hari ini buat produksi minggu depan")} className="px-3 py-1 rounded-full border border-outline-variant text-xs hover:border-primary hover:text-primary transition-colors">
+                            <button type="button" onClick={() => setAiText("tolong catat 400kg cengkeh dari Madura, tiba hari ini buat produksi minggu depan")} className="px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors">
                                 Cengkeh WhatsApp (ID)
                             </button>
                         </div>
                         <textarea
-                            className="w-full min-h-[100px] bg-white border border-outline-variant rounded-lg resize-none focus:ring-1 focus:ring-primary p-3 text-sm font-mono"
+                            className="field min-h-[100px] resize-none font-mono"
                             placeholder="Paste supplier message, email, or delivery note here..."
                             value={aiText}
                             onChange={(e) => setAiText(e.target.value)}
                         />
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             <button
                                 onClick={handleAiExtract}
                                 disabled={!aiText.trim() || extracting}
-                                className="bg-secondary text-on-secondary font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+                                className="btn btn-primary"
                             >
-                                {extracting ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : <span className="material-symbols-outlined text-sm">auto_awesome</span>}
+                                {extracting ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">auto_awesome</span>}
                                 {extracting ? "Extracting..." : "Extract with AI"}
                             </button>
                             {aiResult && (
-                                <div className="flex items-center gap-3 flex-1">
-                                    <div className="flex-1 bg-secondary-container/30 p-3 rounded-lg border border-secondary/20">
+                                <div className="flex items-center gap-3 flex-1 min-w-[260px]">
+                                    <div className="flex-1 bg-emerald-50/70 p-3 rounded-lg border border-emerald-100">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-xs font-bold text-secondary">Extraction Complete</span>
-                                            <span className="text-[10px] font-mono font-bold text-secondary">{aiConfidence}% confidence</span>
+                                            <span className="text-xs font-semibold text-emerald-700">Extraction Complete</span>
+                                            <span className="text-[11px] font-mono font-semibold text-emerald-700">{aiConfidence}% confidence</span>
                                         </div>
-                                        <p className="text-xs text-on-surface-variant">{aiResult.material_name} from {aiResult.supplier_name} — {aiResult.quantity} {aiResult.unit}</p>
+                                        <p className="text-xs text-slate-600">{aiResult.material_name} from {aiResult.supplier_name} — {aiResult.quantity} {aiResult.unit}</p>
                                     </div>
                                     <button
                                         onClick={handleApplyAi}
-                                        className="bg-primary text-on-primary font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+                                        className="btn btn-primary"
                                     >
-                                        <span className="material-symbols-outlined text-sm">check</span>
-                                        Apply to Form
+                                        <span className="material-symbols-outlined text-[18px]">check</span>
+                                        Apply
                                     </button>
                                 </div>
                             )}
@@ -265,13 +271,15 @@ export default function InboundNewPage() {
             </div>
 
             {/* Main Form */}
-            <div className="bg-white rounded-xl border border-outline-variant p-6 shadow-sm">
+            <div className="ui-card p-6 sm:p-7">
                 <div className="flex items-center gap-2 mb-6">
-                    <span className="material-symbols-outlined text-primary">edit_note</span>
-                    <h3 className="font-bold text-lg">Receipt Details</h3>
+                    <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 grid place-items-center">
+                        <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                    </span>
+                    <h3 className="font-semibold text-base text-slate-900">Receipt Details</h3>
                     {aiConfidence && (
-                        <span className="ml-auto text-[10px] font-bold uppercase tracking-widest bg-secondary/10 text-secondary px-2 py-1 rounded-full flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px]">auto_awesome</span>
+                        <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            <span className="material-symbols-outlined text-[12px] icon-fill">auto_awesome</span>
                             AI-filled ({aiConfidence}%)
                         </span>
                     )}
@@ -283,25 +291,25 @@ export default function InboundNewPage() {
                         {validation.materialFound === true && (
                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
                                 <span className="material-symbols-outlined text-[16px]">verified</span>
-                                <span><span className="font-bold">Material verified:</span> matched to <span className="font-bold">{validation.materialMatch}</span></span>
+                                <span><span className="font-semibold">Material verified:</span> matched to <span className="font-semibold">{validation.materialMatch}</span></span>
                             </div>
                         )}
                         {validation.materialFound === false && (
                             <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
                                 <span className="material-symbols-outlined text-[16px]">warning</span>
-                                <span><span className="font-bold">Material not found</span> in master data — will be created as new entry</span>
+                                <span><span className="font-semibold">Material not found</span> in master data — will be created as new entry</span>
                             </div>
                         )}
                         {validation.supplierFound === true && (
                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
                                 <span className="material-symbols-outlined text-[16px]">verified</span>
-                                <span><span className="font-bold">Supplier verified:</span> matched to <span className="font-bold">{validation.supplierMatch}</span></span>
+                                <span><span className="font-semibold">Supplier verified:</span> matched to <span className="font-semibold">{validation.supplierMatch}</span></span>
                             </div>
                         )}
                         {validation.supplierFound === false && (
                             <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg flex items-center gap-2 text-xs">
                                 <span className="material-symbols-outlined text-[16px]">warning</span>
-                                <span><span className="font-bold">Supplier not found</span> in master data — verify before proceeding</span>
+                                <span><span className="font-semibold">Supplier not found</span> in master data — verify before proceeding</span>
                             </div>
                         )}
                     </div>
@@ -309,39 +317,39 @@ export default function InboundNewPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Supplier *</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Supplier *</label>
                         <input
-                            className={`w-full text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.supplier_name ? "border-error" : "border-outline-variant"}`}
+                            className={`field ${errors.supplier_name ? "!border-rose-400 focus:!ring-rose-100" : ""}`}
                             value={form.supplier_name}
                             onChange={e => updateField("supplier_name", e.target.value)}
                             onBlur={() => validateMasterData()}
                             placeholder="e.g. Java Citrus Farm"
                         />
-                        {errors.supplier_name && <p className="text-xs text-error mt-1">{errors.supplier_name}</p>}
+                        {errors.supplier_name && <p className="text-xs text-rose-600 mt-1">{errors.supplier_name}</p>}
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Material *</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Material *</label>
                         <input
-                            className={`w-full text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.material_name ? "border-error" : "border-outline-variant"}`}
+                            className={`field ${errors.material_name ? "!border-rose-400 focus:!ring-rose-100" : ""}`}
                             value={form.material_name}
                             onChange={e => updateField("material_name", e.target.value)}
                             onBlur={() => validateMasterData()}
                             placeholder="e.g. Citrus Peel Extract"
                         />
-                        {errors.material_name && <p className="text-xs text-error mt-1">{errors.material_name}</p>}
+                        {errors.material_name && <p className="text-xs text-rose-600 mt-1">{errors.material_name}</p>}
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Quantity *</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Quantity *</label>
                         <div className="flex gap-2">
                             <input
                                 type="number"
-                                className={`flex-1 text-sm border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.quantity ? "border-error" : "border-outline-variant"}`}
+                                className={`field flex-1 ${errors.quantity ? "!border-rose-400 focus:!ring-rose-100" : ""}`}
                                 value={form.quantity}
                                 onChange={e => updateField("quantity", e.target.value)}
                                 placeholder="e.g. 400"
                             />
                             <select
-                                className="w-24 text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                                className="field w-24 cursor-pointer"
                                 value={form.unit}
                                 onChange={e => updateField("unit", e.target.value)}
                             >
@@ -351,31 +359,31 @@ export default function InboundNewPage() {
                                 <option value="pcs">pcs</option>
                             </select>
                         </div>
-                        {errors.quantity && <p className="text-xs text-error mt-1">{errors.quantity}</p>}
+                        {errors.quantity && <p className="text-xs text-rose-600 mt-1">{errors.quantity}</p>}
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Batch Reference *</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Batch Reference *</label>
                         <input
-                            className={`w-full text-sm font-mono border rounded-lg p-3 focus:border-primary focus:ring-1 ${errors.batch_reference ? "border-error" : "border-outline-variant"}`}
+                            className={`field font-mono ${errors.batch_reference ? "!border-rose-400 focus:!ring-rose-100" : ""}`}
                             value={form.batch_reference}
                             onChange={e => updateField("batch_reference", e.target.value)}
                             placeholder="e.g. JCF-CIT-0531"
                         />
-                        {errors.batch_reference && <p className="text-xs text-error mt-1">{errors.batch_reference}</p>}
+                        {errors.batch_reference && <p className="text-xs text-rose-600 mt-1">{errors.batch_reference}</p>}
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Arrival Date</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Arrival Date</label>
                         <input
                             type="date"
-                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            className="field"
                             value={form.arrival_date}
                             onChange={e => updateField("arrival_date", e.target.value)}
                         />
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Temperature Requirement</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Temperature Requirement</label>
                         <select
-                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            className="field cursor-pointer"
                             value={form.temperature_requirement}
                             onChange={e => updateField("temperature_requirement", e.target.value)}
                         >
@@ -385,9 +393,9 @@ export default function InboundNewPage() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant block mb-1.5">Hazard Class</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Hazard Class</label>
                         <select
-                            className="w-full text-sm border border-outline-variant rounded-lg p-3 focus:border-primary focus:ring-1"
+                            className="field cursor-pointer"
                             value={form.hazard_class}
                             onChange={e => updateField("hazard_class", e.target.value)}
                         >
@@ -400,31 +408,30 @@ export default function InboundNewPage() {
                 </div>
 
                 {/* Submit */}
-                <div className="mt-8 pt-6 border-t border-outline-variant flex items-center justify-between">
-                    <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">info</span>
+                <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px]">info</span>
                         Receipt will be sent to QC queue for inspection.
                     </p>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 w-full sm:w-auto">
                         <button
                             onClick={() => router.push("/inbound")}
-                            className="border border-outline-variant bg-white font-bold py-3 px-6 rounded-sm text-xs uppercase tracking-widest text-on-surface hover:bg-surface-container-low transition-colors"
+                            className="btn btn-secondary flex-1 sm:flex-none"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={() => { if (validate()) setShowConfirm(true); }}
                             disabled={submitting || !hasPermission}
-                            className={`font-bold py-3 px-6 rounded-sm text-xs uppercase tracking-widest transition-all flex items-center gap-2
-                                ${hasPermission ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
+                            className="btn btn-primary flex-1 sm:flex-none"
                         >
-                            <span className="material-symbols-outlined text-[16px]">send</span>
+                            <span className="material-symbols-outlined text-[18px]">send</span>
                             Submit to QC
                         </button>
                     </div>
                 </div>
                 {!hasPermission && (
-                    <p className="text-xs text-error text-right mt-2">Your role ({role}) does not have permission to create receipts.</p>
+                    <p className="text-xs text-rose-600 text-right mt-2">Your role ({role}) does not have permission to create receipts.</p>
                 )}
             </div>
 

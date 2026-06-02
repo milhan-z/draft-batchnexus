@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { notifications as mantineNotifications } from "@mantine/notifications";
 import { ROLES, useRole, UserRole, getActorName } from "@/lib/rbac";
 import { fetchItems } from "@/lib/api/client";
@@ -16,8 +16,37 @@ interface NotifItem {
     unread: boolean;
 }
 
+const navLabels: Record<string, string> = {
+    "/": "Dashboard",
+    "/inbound": "Inbound Intake",
+    "/qc": "QC Release",
+    "/ppic": "PPIC Board",
+    "/lots": "Lot Traceability",
+    "/warehouse": "Warehouse",
+    "/dispatch": "Dispatch",
+    "/copilot": "Ops Copilot",
+    "/summary": "Daily Summary",
+    "/policy": "Policy Rules",
+    "/audit": "Audit Log",
+};
+
+const navIcons: Record<string, string> = {
+    "/": "dashboard",
+    "/inbound": "move_to_inbox",
+    "/qc": "biotech",
+    "/ppic": "view_kanban",
+    "/lots": "inventory_2",
+    "/warehouse": "warehouse",
+    "/dispatch": "send",
+    "/copilot": "smart_toy",
+    "/summary": "summarize",
+    "/policy": "gavel",
+    "/audit": "history_edu",
+};
+
 export const TopBar = () => {
     const router = useRouter();
+    const pathname = usePathname();
     const { role: activeRole, changeRole } = useRole();
     const [showRoleMenu, setShowRoleMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -30,8 +59,9 @@ export const TopBar = () => {
     const profileRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => n.unread).length;
+    const currentLabel = navLabels[pathname] || "Page";
+    const currentIcon = navIcons[pathname] || "article";
 
-    // Load data-driven notifications from operational records
     useEffect(() => {
         if (notifsLoaded) return;
         const loadNotifs = async () => {
@@ -42,19 +72,16 @@ export const TopBar = () => {
                     fetchItems<any>("inbound_receipts", { limit: 50 }),
                 ]);
                 const items: NotifItem[] = [];
-                // Cold-chain alerts
                 zonesRes.data.filter((z: any) => z.status === "Cold-chain Alert").forEach((z: any) => {
                     items.push({ id: `cold-${z.id}`, icon: "warning", color: "text-amber-600", title: "Cold-chain Alert", message: `${z.id} at ${z.current_temperature}°C — outside safe range`, time: "Active", unread: true });
                 });
-                // Pending QC
                 const pendingQc = receiptsRes.data.filter((r: any) => r.status === "Pending QC").length;
                 if (pendingQc > 0) {
-                    items.push({ id: "pending-qc", icon: "science", color: "text-purple-600", title: "Pending QC", message: `${pendingQc} material(s) awaiting QC review`, time: "Now", unread: true });
+                    items.push({ id: "pending-qc", icon: "science", color: "text-violet-600", title: "Pending QC", message: `${pendingQc} material(s) awaiting QC review`, time: "Now", unread: true });
                 }
-                // Recent audit events
                 auditsRes.data.slice(0, 2).forEach((a: any) => {
                     const icon = a.action.includes("QC") ? "biotech" : a.action.includes("slot") ? "warehouse" : "edit_document";
-                    const color = a.action.includes("Block") ? "text-red-600" : "text-blue-600";
+                    const color = a.action.includes("Block") ? "text-rose-600" : "text-sky-600";
                     items.push({ id: a.id, icon, color, title: a.action, message: `${a.actor} • ${a.change_detail?.substring(0, 60) || ""}`, time: new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), unread: false });
                 });
                 setNotifications(items);
@@ -64,7 +91,6 @@ export const TopBar = () => {
         loadNotifs();
     }, [notifsLoaded]);
 
-    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (roleRef.current && !roleRef.current.contains(e.target as Node)) setShowRoleMenu(false);
@@ -77,21 +103,13 @@ export const TopBar = () => {
 
     const markAllRead = () => {
         setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-        mantineNotifications.show({
-            title: "Notifications Cleared",
-            message: "All notifications have been marked as read.",
-            color: "green"
-        });
+        mantineNotifications.show({ title: "Notifications Cleared", message: "All notifications marked as read.", color: "green" });
     };
 
     const handleRoleChange = (roleId: string) => {
         changeRole(roleId as UserRole);
         setShowRoleMenu(false);
-        mantineNotifications.show({
-            title: "Role Switched",
-            message: `You are now viewing the app as ${ROLES.find(r => r.id === roleId)?.label}.`,
-            color: "indigo"
-        });
+        mantineNotifications.show({ title: "Role Switched", message: `Now viewing as ${ROLES.find(r => r.id === roleId)?.label}.`, color: "teal" });
     };
 
     const handleLogout = () => {
@@ -103,95 +121,68 @@ export const TopBar = () => {
     const currentRole = ROLES.find(r => r.id === activeRole) || ROLES[0];
     const personaName = getActorName(activeRole);
     const personaInitials = personaName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    const personaEmail = personaName.toLowerCase().replace(/\s+/g, ".") + "@sima-arome.com";
 
-    const closeAll = () => {
-        setShowRoleMenu(false);
-        setShowNotifications(false);
-        setShowProfile(false);
-    };
+    const closeAll = () => { setShowRoleMenu(false); setShowNotifications(false); setShowProfile(false); };
 
     return (
-        <header className="bg-surface shadow-sm sticky top-0 z-30 h-16 flex justify-between items-center px-4 md:px-8 md:ml-64 w-full md:w-[calc(100%-16rem)]">
-            <div className="flex items-center flex-1">
-                <div className="relative w-full max-w-md hidden md:block">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant text-sm">search</span>
-                    <input className="w-full bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary focus:bg-surface transition-colors" placeholder="Search orders, lots, or materials..." type="text"/>
-                </div>
-                <div className="md:hidden font-bold text-xl text-primary">BatchNexus</div>
+        <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 flex items-center gap-4 sticky top-0 z-30 w-full">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 min-w-0">
+                <span className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 grid place-items-center shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">{currentIcon}</span>
+                </span>
+                <span className="text-sm text-slate-400 hidden sm:inline">Operations</span>
+                <span className="material-symbols-outlined text-slate-300 text-[16px] hidden sm:inline">chevron_right</span>
+                <span className="text-sm text-slate-900 truncate font-semibold">{currentLabel}</span>
             </div>
-            <div className="flex items-center space-x-3">
-                {/* Role Switcher */}
-                <div className="relative" ref={roleRef}>
-                    <button 
-                        onClick={() => { const s = !showRoleMenu; closeAll(); setShowRoleMenu(s); }}
-                        className="hidden md:flex items-center text-on-surface-variant text-xs font-bold px-3 py-1.5 border border-outline-variant rounded-sm hover:bg-surface-container-highest transition-colors uppercase tracking-wider"
-                    >
-                        <span className="material-symbols-outlined mr-1 text-sm icon-fill text-primary">{currentRole.icon}</span>
-                        {currentRole.label}
-                        <span className="material-symbols-outlined ml-1 text-sm">arrow_drop_down</span>
-                    </button>
-                    {showRoleMenu && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant">
-                                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Switch Demo Role</p>
-                            </div>
-                            {ROLES.map(role => (
-                                <button 
-                                    key={role.id}
-                                    onClick={() => handleRoleChange(role.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                                        activeRole === role.id 
-                                        ? "bg-primary/5 text-primary" 
-                                        : "hover:bg-surface-container-high text-on-surface"
-                                    }`}
-                                >
-                                    <span className={`material-symbols-outlined ${activeRole === role.id ? 'icon-fill' : ''}`}>{role.icon}</span>
-                                    <div>
-                                        <p className="text-sm font-bold">{role.label}</p>
-                                        <p className="text-[10px] text-on-surface-variant">{role.desc}</p>
-                                    </div>
-                                    {activeRole === role.id && <span className="material-symbols-outlined ml-auto text-primary icon-fill text-sm">check_circle</span>}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+
+            {/* Search + Actions */}
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                {/* Search */}
+                <div className="relative hidden md:block">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                    <input
+                        placeholder="Search lots, suppliers, customers..."
+                        className="pl-9 pr-9 w-72 h-9 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:bg-white transition-all outline-none"
+                        type="text"
+                    />
+                    <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 bg-white border border-slate-200 rounded px-1.5 py-0.5 font-sans hidden lg:block">⌘K</kbd>
                 </div>
 
                 {/* Notifications */}
                 <div className="relative" ref={notifRef}>
-                    <button 
+                    <button
                         onClick={() => { const s = !showNotifications; closeAll(); setShowNotifications(s); }}
-                        className="text-on-surface-variant hover:bg-surface-container-highest p-2 rounded-full transition-colors relative"
+                        className="relative h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors"
                     >
-                        <span className="material-symbols-outlined">notifications</span>
+                        <span className="material-symbols-outlined text-slate-600 text-[20px]">notifications</span>
                         {unreadCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{unreadCount}</span>
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white" />
                         )}
                     </button>
                     {showNotifications && (
-                        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in duration-200">
-                            <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant flex items-center justify-between">
-                                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Notifications</p>
+                        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                                <p className="text-xs font-semibold text-slate-900">Notifications</p>
                                 {unreadCount > 0 && (
-                                    <button onClick={markAllRead} className="text-[10px] text-primary font-bold uppercase tracking-widest hover:underline">Mark all read</button>
+                                    <button onClick={markAllRead} className="text-[11px] text-emerald-600 font-medium hover:underline">Mark all read</button>
                                 )}
                             </div>
                             <div className="max-h-72 overflow-y-auto">
                                 {notifications.length === 0 ? (
-                                    <div className="p-6 text-center text-on-surface-variant">
+                                    <div className="p-6 text-center text-slate-500">
                                         <span className="material-symbols-outlined text-2xl opacity-50 mb-1">notifications_off</span>
                                         <p className="text-xs">No notifications</p>
                                     </div>
                                 ) : notifications.map(n => (
-                                    <div key={n.id} className={`flex items-start gap-3 px-4 py-3 border-b border-outline-variant/50 last:border-0 ${n.unread ? 'bg-primary/3' : ''}`}>
-                                        <span className={`material-symbols-outlined icon-fill mt-0.5 ${n.color}`}>{n.icon}</span>
+                                    <div key={n.id} className={`flex items-start gap-3 px-4 py-3 border-b border-slate-50 last:border-0 ${n.unread ? 'bg-emerald-50/30' : ''}`}>
+                                        <span className={`material-symbols-outlined icon-fill mt-0.5 text-[16px] ${n.color}`}>{n.icon}</span>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text-xs ${n.unread ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{n.title}</p>
-                                            <p className="text-xs text-on-surface-variant truncate">{n.message}</p>
-                                            <p className="text-[10px] text-outline mt-0.5">{n.time}</p>
+                                            <p className={`text-xs ${n.unread ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>{n.title}</p>
+                                            <p className="text-[11px] text-slate-500 truncate">{n.message}</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">{n.time}</p>
                                         </div>
-                                        {n.unread && <span className="w-2 h-2 bg-primary rounded-full mt-1.5 flex-shrink-0"></span>}
+                                        {n.unread && <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5 flex-shrink-0" />}
                                     </div>
                                 ))}
                             </div>
@@ -199,31 +190,46 @@ export const TopBar = () => {
                     )}
                 </div>
 
-                {/* Profile Avatar */}
+                {/* Profile with role switch */}
                 <div className="relative" ref={profileRef}>
                     <button
                         onClick={() => { const s = !showProfile; closeAll(); setShowProfile(s); }}
-                        className="w-9 h-9 rounded-full bg-primary text-on-primary ml-2 flex items-center justify-center text-xs font-bold cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all"
-                        aria-label="Profile"
+                        className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
                     >
-                        {personaInitials}
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center text-[10px] font-bold">
+                            {personaInitials}
+                        </div>
+                        <div className="hidden sm:block text-left">
+                            <div className="text-xs text-slate-900 leading-tight font-medium">{personaName}</div>
+                            <div className="text-[10px] text-slate-500 leading-tight">{currentRole.label}</div>
+                        </div>
+                        <span className="material-symbols-outlined text-slate-400 text-[14px]">expand_more</span>
                     </button>
 
                     {showProfile && (
-                        <div className="absolute right-0 top-full mt-2 w-72 bg-surface rounded-xl shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in duration-200">
-                            <div className="px-5 py-4 border-b border-outline-variant bg-surface-container-low flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center text-xl font-bold mb-3">{personaInitials}</div>
-                                <h3 className="font-bold text-on-surface text-base">{personaName}</h3>
-                                <p className="text-xs text-on-surface-variant font-medium mt-0.5">{personaEmail}</p>
-                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
-                                    <span className="material-symbols-outlined text-sm icon-fill">{currentRole.icon}</span>
-                                    {currentRole.label}
-                                </div>
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                            <div className="px-4 py-3 border-b border-slate-100">
+                                <p className="text-xs font-semibold text-slate-900">Switch role (RBAC)</p>
                             </div>
-                            <div className="p-2">
-                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-error-container/30 text-left transition-colors group">
-                                    <span className="material-symbols-outlined text-error text-sm">logout</span>
-                                    <span className="text-sm text-error font-medium">Sign Out</span>
+                            {ROLES.map(r => (
+                                <button
+                                    key={r.id}
+                                    onClick={() => handleRoleChange(r.id)}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                                        activeRole === r.id
+                                            ? "bg-emerald-50 text-emerald-700"
+                                            : "hover:bg-slate-50 text-slate-700"
+                                    }`}
+                                >
+                                    <span className={`material-symbols-outlined text-[18px] ${activeRole === r.id ? 'icon-fill' : ''}`}>{r.icon}</span>
+                                    <span className="flex-1 text-sm">{r.label}</span>
+                                    {activeRole === r.id && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                                </button>
+                            ))}
+                            <div className="border-t border-slate-100">
+                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-rose-50 transition-colors">
+                                    <span className="material-symbols-outlined text-rose-600 text-[18px]">logout</span>
+                                    <span className="text-sm text-rose-600 font-medium">Sign out</span>
                                 </button>
                             </div>
                         </div>

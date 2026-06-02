@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { fetchItems, createItem } from "@/lib/api/client";
 import { useRole, canGenerateSummary, getActorName, canViewAudit } from "@/lib/rbac";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { Spinner, EmptyState } from "@/components/shared/States";
 
 export default function AuditPage() {
     const { role } = useRole();
@@ -98,117 +100,120 @@ export default function AuditPage() {
     const hasPermission = canGenerateSummary(role);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-9rem)] gap-6">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h2 className="font-display font-bold text-3xl text-primary">Audit Log & Reports</h2>
-                    <p className="text-on-surface-variant mt-1">Immutable ledger of all system actions and AI-generated insights.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => {
-                            let csv = "Timestamp,Actor,Role,Action,Entity,Change Detail\n";
-                            filteredAudits.forEach((a: any) => {
-                                csv += `"${a.timestamp}","${a.actor}","${a.role}","${a.action}","${a.entity}","${a.change_detail}"\n`;
-                            });
-                            const blob = new Blob([csv], { type: "text/csv" });
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement("a");
-                            link.href = url;
-                            link.download = `audit_log_${new Date().toISOString().split('T')[0]}.csv`;
-                            link.click();
-                            URL.revokeObjectURL(url);
-                        }}
-                        className="font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm border border-outline-variant bg-white text-on-surface hover:border-primary hover:text-primary"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">download</span>
-                        Export CSV
-                    </button>
-                    <button 
-                        onClick={handleGenerateSummary}
-                        disabled={summaryLoading || !hasPermission}
-                        className={`font-bold py-2.5 px-5 rounded-sm text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm
-                            ${hasPermission ? 'bg-secondary text-on-secondary hover:opacity-90' : 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed'}`}
-                    >
-                        {summaryLoading ? <span className="material-symbols-outlined animate-spin text-[16px]">sync</span> : <span className="material-symbols-outlined text-[16px]">auto_awesome</span>}
-                        Generate AI Summary
-                    </button>
-                </div>
-            </div>
+        <div className="flex flex-col h-[calc(100vh-9rem)] gap-6 animate-fade-in">
+            <PageHeader
+                icon="history_edu"
+                title="Audit Log & Reports"
+                subtitle="Immutable ledger of all system actions and AI-generated insights."
+                actions={
+                    <>
+                        <button
+                            onClick={() => {
+                                let csv = "Timestamp,Actor,Role,Action,Entity,Change Detail\n";
+                                filteredAudits.forEach((a: any) => {
+                                    csv += `"${a.timestamp}","${a.actor}","${a.role}","${a.action}","${a.entity}","${a.change_detail}"\n`;
+                                });
+                                const blob = new Blob([csv], { type: "text/csv" });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.download = `audit_log_${new Date().toISOString().split('T')[0]}.csv`;
+                                link.click();
+                                URL.revokeObjectURL(url);
+                            }}
+                            className="btn btn-secondary"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">download</span>
+                            <span className="hidden sm:inline">Export CSV</span>
+                        </button>
+                        <button
+                            onClick={handleGenerateSummary}
+                            disabled={summaryLoading || !hasPermission}
+                            className="btn btn-primary"
+                        >
+                            {summaryLoading ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">auto_awesome</span>}
+                            <span className="hidden sm:inline">Generate AI Summary</span>
+                            <span className="sm:hidden">Summary</span>
+                        </button>
+                    </>
+                }
+            />
 
             {summary && (
-                <div className="bg-primary-container text-on-primary-container p-6 rounded-xl border border-primary/20 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200 p-6 rounded-xl relative overflow-hidden animate-rise">
                     <div className="flex items-center gap-2 mb-4">
-                        <span className="material-symbols-outlined text-primary">summarize</span>
-                        <h3 className="font-bold">Daily Operations Insight</h3>
+                        <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white grid place-items-center">
+                            <span className="material-symbols-outlined text-[18px] icon-fill">summarize</span>
+                        </span>
+                        <h3 className="font-semibold text-slate-900">Daily Operations Insight</h3>
                     </div>
-                    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-lg font-mono text-sm leading-relaxed border border-primary/10">
+                    <div className="bg-white/70 backdrop-blur-sm p-4 rounded-xl font-mono text-sm leading-relaxed border border-emerald-100 text-slate-700">
                         {summary.split('\n').map((line, i) => (
-                            <div key={i} className={line.startsWith('-') ? 'ml-4' : 'font-bold mb-2'}>{line}</div>
+                            <div key={i} className={line.startsWith('-') ? 'ml-4' : 'font-semibold mb-2 text-slate-900'}>{line}</div>
                         ))}
                     </div>
-                    <p className="text-[10px] uppercase tracking-widest mt-4 opacity-70">Generated from: inbound receipts, QC inspections, lots, temperature readings, warehouse moves, and dispatch records.</p>
+                    <p className="text-[11px] mt-4 text-slate-500">Generated from: inbound receipts, QC inspections, lots, temperature readings, warehouse moves, and dispatch records.</p>
                 </div>
             )}
 
-            <div className="flex-1 flex flex-col bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden min-h-0">
-                <div className="p-4 border-b border-outline-variant bg-surface-container flex flex-wrap gap-4 items-center justify-between">
-                    <div className="flex gap-2">
+            <div className="flex-1 flex flex-col ui-card overflow-hidden min-h-0">
+                <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex flex-wrap gap-3 items-center justify-between">
+                    <div className="flex gap-1.5 flex-wrap">
                         {['All', 'Intake', 'QC', 'Warehouse', 'Copilot', 'Summary'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border ${filter === f ? 'bg-primary text-on-primary border-primary' : 'bg-white text-on-surface-variant border-outline-variant hover:border-primary/50 hover:text-primary'}`}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors border ${filter === f ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-700'}`}
                             >
                                 {f}
                             </button>
                         ))}
                     </div>
-                    <div className="relative w-64">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-                        <input 
-                            type="text" 
-                            placeholder="Search actor, entity, details..." 
-                            className="w-full pl-9 pr-4 py-1.5 bg-white border border-outline-variant rounded-md text-xs focus:border-primary focus:ring-1"
+                    <div className="relative w-full sm:w-64">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                        <input
+                            type="text"
+                            placeholder="Search actor, entity, details..."
+                            className="field pl-9 h-9 text-xs"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto soft-scroll">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-surface-container-lowest sticky top-0 z-10 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant shadow-sm">
+                        <thead className="bg-white sticky top-0 z-10 text-[11px] uppercase tracking-wide font-semibold text-slate-500 shadow-sm">
                             <tr>
-                                <th className="px-6 py-4 font-bold border-b border-outline-variant w-[15%]">Timestamp</th>
-                                <th className="px-6 py-4 font-bold border-b border-outline-variant w-[20%]">Actor</th>
-                                <th className="px-6 py-4 font-bold border-b border-outline-variant w-[20%]">Action</th>
-                                <th className="px-6 py-4 font-bold border-b border-outline-variant w-[15%]">Entity</th>
-                                <th className="px-6 py-4 font-bold border-b border-outline-variant w-[30%]">Change Detail</th>
+                                <th className="px-6 py-3.5 border-b border-slate-100 w-[15%]">Timestamp</th>
+                                <th className="px-6 py-3.5 border-b border-slate-100 w-[20%]">Actor</th>
+                                <th className="px-6 py-3.5 border-b border-slate-100 w-[20%]">Action</th>
+                                <th className="px-6 py-3.5 border-b border-slate-100 w-[15%]">Entity</th>
+                                <th className="px-6 py-3.5 border-b border-slate-100 w-[30%]">Change Detail</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-outline-variant bg-white">
+                        <tbody className="divide-y divide-slate-100 bg-white">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="p-8 text-center"><span className="material-symbols-outlined animate-spin text-primary">sync</span></td>
+                                    <td colSpan={5}><Spinner label="Loading audit trail..." /></td>
                                 </tr>
                             ) : filteredAudits.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="p-8 text-center text-on-surface-variant opacity-70">No audit events match your filters.</td>
+                                    <td colSpan={5}><EmptyState icon="search_off" title="No audit events match your filters" description="Try a different filter or search term." /></td>
                                 </tr>
                             ) : (
                                 filteredAudits.map(audit => (
-                                    <tr key={audit.id} className="hover:bg-surface-container-low transition-colors">
-                                        <td className="px-6 py-4 text-xs font-mono opacity-80">{new Date(audit.timestamp).toLocaleString('en-GB')}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-on-surface">{audit.actor}</div>
-                                            <div className="text-[10px] uppercase tracking-widest opacity-70">{audit.role}</div>
+                                    <tr key={audit.id} className="hover:bg-slate-50/70 transition-colors">
+                                        <td className="px-6 py-3.5 text-xs font-mono text-slate-500">{new Date(audit.timestamp).toLocaleString('en-GB')}</td>
+                                        <td className="px-6 py-3.5">
+                                            <div className="font-medium text-slate-900">{audit.actor}</div>
+                                            <div className="text-[11px] text-slate-400">{audit.role}</div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">{audit.action}</span>
+                                        <td className="px-6 py-3.5">
+                                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[11px] font-semibold">{audit.action}</span>
                                         </td>
-                                        <td className="px-6 py-4 font-mono font-bold text-xs">{audit.entity}</td>
-                                        <td className="px-6 py-4 text-xs whitespace-normal max-w-xs">{audit.change_detail}</td>
+                                        <td className="px-6 py-3.5 font-mono font-medium text-xs text-slate-700">{audit.entity}</td>
+                                        <td className="px-6 py-3.5 text-xs text-slate-600 whitespace-normal max-w-xs">{audit.change_detail}</td>
                                     </tr>
                                 ))
                             )}
