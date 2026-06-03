@@ -82,15 +82,15 @@ export const ppicJobs = {
 
 export const tempSeries = Array.from({ length: 24 }, (_, i) => ({
   time: `${String(i).padStart(2, "0")}:00`,
-  "Z-A1": -19 + Math.sin(i / 3) * 0.6 + (Math.random() - 0.5) * 0.3,
-  "Z-A2": -18 + Math.sin(i / 4) * 1.5 + (i > 15 ? 1.2 : 0) + (Math.random() - 0.5) * 0.4,
-  "Z-B1": 4 + Math.sin(i / 5) * 0.8 + (Math.random() - 0.5) * 0.3,
+  "Z-A1": Number((-19 + Math.sin(i / 3) * 0.6 + Math.cos(i / 2) * 0.15).toFixed(2)),
+  "Z-A2": Number((-18 + Math.sin(i / 4) * 1.5 + (i > 15 ? 1.2 : 0) + Math.cos(i / 3) * 0.2).toFixed(2)),
+  "Z-B1": Number((4 + Math.sin(i / 5) * 0.8 + Math.cos(i / 2) * 0.15).toFixed(2)),
 }));
 
 export const kpiTrend = Array.from({ length: 14 }, (_, i) => ({
   day: `D${i + 1}`,
-  released: 18 + Math.round(Math.sin(i / 2) * 6 + Math.random() * 4),
-  inbound: 22 + Math.round(Math.cos(i / 2) * 5 + Math.random() * 3),
+  released: 18 + Math.round(Math.sin(i / 2) * 6 + Math.abs(Math.cos(i)) * 3),
+  inbound: 22 + Math.round(Math.cos(i / 2) * 5 + Math.abs(Math.sin(i)) * 2),
 }));
 
 export const policies = [

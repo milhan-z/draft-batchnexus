@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav } from "./MobileNav";
+import { FloatingCopilot } from "@/components/copilot/FloatingCopilot";
 import { canAccessRoute, getAccessDeniedReason, UserRole } from "@/lib/rbac";
 
 export const PageLayout = ({ children }: { children: React.ReactNode }) => {
@@ -88,6 +89,7 @@ export const PageLayout = ({ children }: { children: React.ReactNode }) => {
                 </main>
             </div>
             <MobileNav />
+            <FloatingCopilot />
         </div>
     );
 };

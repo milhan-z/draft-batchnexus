@@ -276,9 +276,10 @@ export default function QCStationPage() {
             <PageHeader
                 icon="biotech"
                 title="QC Release Station"
-                subtitle="Review AI scores and provide human sign-off for material release."
+                subtitle="Review AI-assisted screening before human approval."
                 badge={!loading && (
-                    <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[12px]">biotech</span>
                         {pendingTasks.filter(t => t.status === "Pending QC").length} pending
                     </span>
                 )}
@@ -313,13 +314,14 @@ export default function QCStationPage() {
                                 <button
                                     key={task.id}
                                     onClick={() => setSelectedTask(task)}
-                                    className={`w-full text-left p-4 rounded-xl border transition-all ${selectedTask?.id === task.id ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200' : 'bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50/60'}`}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all ${selectedTask?.id === task.id ? 'bg-emerald-50 border-emerald-200 border-l-4 border-l-emerald-500' : 'bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50/60'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1.5 gap-2">
                                         <span className="font-mono text-[11px] text-slate-500 font-medium">{task.receipt_no}</span>
                                         <StatusBadge status={task.status} />
                                     </div>
                                     <p className="font-semibold text-sm text-slate-900 line-clamp-1">{getMaterialName(task.material_id)}</p>
+                                    <p className="text-[11px] text-slate-400 font-mono line-clamp-1">{task.batch_reference || task.material_id}</p>
                                     <p className="text-xs text-slate-500 line-clamp-1">{getSupplierName(task.supplier_id)}</p>
                                 </button>
                             ))
@@ -352,7 +354,7 @@ export default function QCStationPage() {
                         <div className="ui-card p-5">
                             <div className="flex flex-col sm:flex-row items-start gap-5">
                                 {/* Sample thumbnail */}
-                                <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 grid place-items-center">
+                                <div className="relative w-32 h-32 sm:w-44 sm:h-44 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 grid place-items-center">
                                     {imageUrl ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={imageUrl} alt="QC sample" className="w-full h-full object-cover" />
@@ -419,7 +421,7 @@ export default function QCStationPage() {
                             </div>
                         </div>
 
-                        {/* Vision QC recommendation */}
+                        {/* AI QC recommendation */}
                         {isInspectable && (
                             <div className="relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/40 p-5">
                                 <div className="absolute -top-16 -right-12 w-44 h-44 bg-emerald-500/10 rounded-full blur-2xl" />
@@ -429,12 +431,13 @@ export default function QCStationPage() {
                                             <span className="material-symbols-outlined text-[20px] icon-fill">auto_awesome</span>
                                         </div>
                                         <div>
-                                            <div className="font-semibold text-emerald-900">Vision QC recommendation</div>
+                                            <div className="font-semibold text-emerald-900">AI QC recommendation</div>
                                             <div className="text-xs text-emerald-700/80">{visionResult ? "Computer vision · on-device" : "Awaiting sample image · showing baseline"}</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <div className={`text-3xl font-semibold leading-none ${recTone}`}>{recommendation === "Block Material" ? "Block" : recommendation === "Pass" ? "Pass" : "Review"}</div>
+                                        <div className="text-[11px] text-emerald-700 mt-1">Recommendation: {recommendation}</div>
                                         <div className="text-xs text-emerald-600 mt-1">{conf}% confidence</div>
                                     </div>
                                 </div>
@@ -470,7 +473,7 @@ export default function QCStationPage() {
                                 </div>
                                 <p className="relative text-[11px] text-emerald-700/80 mt-3 flex items-center gap-1.5">
                                     <span className="material-symbols-outlined text-[14px]">person</span>
-                                    AI assists the first inspection layer. Final release must be approved by QC staff.
+                                    AI supports the first inspection layer. Final release remains human-approved and audit-logged.
                                 </p>
                             </div>
                         )}
@@ -491,7 +494,7 @@ export default function QCStationPage() {
                             <div className="ui-card p-5">
                                 <div className="mb-4">
                                     <h4 className="text-sm font-semibold text-slate-900">Human decision</h4>
-                                    <p className="text-xs text-slate-500 mt-0.5">Final release is always human-approved and audit-logged.</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">AI supports the first inspection layer. Final release remains human-approved and audit-logged.</p>
                                 </div>
 
                                 {/* Policy warnings */}
@@ -523,32 +526,38 @@ export default function QCStationPage() {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <button 
-                                        onClick={() => setShowConfirm(true)}
-                                        disabled={!hasPermission || shouldBlockApprove}
-                                        className={`font-semibold py-3 rounded-xl text-sm transition-all flex justify-center items-center gap-2
-                                            ${hasPermission && !shouldBlockApprove ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={handleRecheck}
-                                        disabled={!hasPermission || recheckProcessing}
-                                        className="border border-amber-200 text-amber-700 bg-amber-50/60 font-semibold py-3 rounded-xl text-sm hover:bg-amber-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                                    >
-                                        {recheckProcessing ? <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> : <span className="material-symbols-outlined text-[18px]">replay</span>}
-                                        Recheck
-                                    </button>
-                                    <button
-                                        onClick={() => setShowBlockConfirm(true)}
-                                        disabled={!hasPermission || blockProcessing}
-                                        className="border border-rose-200 text-rose-600 bg-rose-50/60 font-semibold py-3 rounded-xl text-sm hover:bg-rose-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">block</span>
-                                        Block
-                                    </button>
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 mt-4">
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span className="material-symbols-outlined text-[14px] text-emerald-500">shield_person</span>
+                                        <span>Every decision is audit-logged.</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => setShowBlockConfirm(true)}
+                                            disabled={!hasPermission || blockProcessing}
+                                            className="h-9 px-4 rounded-xl text-sm font-semibold border border-rose-200 text-rose-600 bg-rose-50/60 hover:bg-rose-50 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">block</span>
+                                            Block material
+                                        </button>
+                                        <button
+                                            onClick={handleRecheck}
+                                            disabled={!hasPermission || recheckProcessing}
+                                            className="h-9 px-4 rounded-xl text-sm font-semibold border border-amber-200 text-amber-700 bg-amber-50/60 hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                                        >
+                                            {recheckProcessing ? <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span> : <span className="material-symbols-outlined text-[16px]">replay</span>}
+                                            Request recheck
+                                        </button>
+                                        <button
+                                            onClick={() => setShowConfirm(true)}
+                                            disabled={!hasPermission || shouldBlockApprove}
+                                            className={`h-9 px-4 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50
+                                                ${hasPermission && !shouldBlockApprove ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                            Approve release
+                                        </button>
+                                    </div>
                                 </div>
                                 {!hasPermission && (
                                     <p className="text-xs text-rose-600 mt-3 text-center">Your role ({role}) cannot approve QC.</p>

@@ -56,6 +56,23 @@ export default function LotsTraceabilityPage() {
         loadData();
     }, []);
 
+    // Broadcast the selected lot so the global Ops Copilot can resolve
+    // "Where is this lot?" without the operator typing the number.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const lotNum = selectedLot?.lot_number || "";
+        try {
+            sessionStorage.setItem("batchnexus_selected_lot", lotNum);
+        } catch {}
+        window.dispatchEvent(new CustomEvent("copilot:selectLot", { detail: lotNum }));
+        return () => {
+            try {
+                sessionStorage.removeItem("batchnexus_selected_lot");
+            } catch {}
+            window.dispatchEvent(new CustomEvent("copilot:selectLot", { detail: "" }));
+        };
+    }, [selectedLot]);
+
     const getMaterialName = (id: string) => materials.get(id)?.name || "Unknown";
     const getReceipt = (id: string) => receipts.get(id);
     const getSupplierName = (recId: any) => {

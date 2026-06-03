@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRole, canAccessRoute, canGenerateSummary } from "@/lib/rbac";
+import { useRole, canAccessRoute } from "@/lib/rbac";
+import { NowBrief } from "./NowBrief";
 
 export const Sidebar = () => {
     const pathname = usePathname();
@@ -19,8 +20,18 @@ export const Sidebar = () => {
                 { path: "/lots", label: "Lot Traceability", icon: "inventory_2" },
                 { path: "/warehouse", label: "Warehouse", icon: "warehouse" },
                 { path: "/dispatch", label: "Dispatch", icon: "send" },
+            ],
+        },
+        {
+            label: "Intelligence",
+            items: [
                 { path: "/copilot", label: "Ops Copilot", icon: "smart_toy" },
                 { path: "/summary", label: "Daily Summary", icon: "summarize" },
+            ],
+        },
+        {
+            label: "Governance",
+            items: [
                 { path: "/policy", label: "Policy Rules", icon: "gavel" },
                 { path: "/audit", label: "Audit Log", icon: "history_edu" },
             ],
@@ -65,7 +76,7 @@ export const Sidebar = () => {
                                     <span className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${isActive(item.path) ? 'icon-fill' : ''}`}>{item.icon}</span>
                                     <span className="flex-1 truncate">{item.label}</span>
                                     {item.path === "/qc" && (
-                                        <span className="h-5 px-1.5 text-[10px] font-semibold bg-violet-100 text-violet-700 rounded-full flex items-center justify-center">3</span>
+                                        <span className="h-5 px-1.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center">3</span>
                                     )}
                                     {item.path === "/warehouse" && (
                                         <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -77,21 +88,9 @@ export const Sidebar = () => {
                 ))}
             </div>
 
-            {/* AI Copilot promo card */}
+            {/* Now Brief */}
             <div className="p-3 border-t border-slate-200">
-                <div className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 p-4 text-white">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-emerald-300 text-[16px] icon-fill">auto_awesome</span>
-                        <span className="text-xs font-medium">AI Copilot Ready</span>
-                    </div>
-                    <p className="text-[11px] text-slate-300 mb-3">Ask anything about lots, dispatch, or cold-chain.</p>
-                    <Link
-                        href="/copilot"
-                        className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-900 text-xs font-semibold py-1.5 px-3 rounded-md transition-colors"
-                    >
-                        Open Copilot
-                    </Link>
-                </div>
+                <NowBrief />
             </div>
 
             {/* Role indicator */}

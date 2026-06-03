@@ -12,6 +12,7 @@ import { Badge } from "./ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { roles } from "./mock-data";
 import { cn } from "./ui/utils";
+import { FloatingCopilot } from "./floating-copilot";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -83,15 +84,67 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-3 border-t border-slate-200">
-          <div className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 p-4 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-emerald-300" />
-              <span className="text-xs" style={{ fontWeight: 500 }}>AI Copilot Ready</span>
+          <div className="rounded-xl bg-gradient-to-br from-[#fdfcf8] to-[#f5f1e8] border border-emerald-100 p-4 text-slate-900 relative overflow-hidden">
+            <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-2 relative">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[11px] uppercase tracking-wider text-emerald-700" style={{ fontWeight: 600 }}>Now brief</span>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> live
+              </span>
             </div>
-            <p className="text-[11px] text-slate-300 mb-3">Ask anything about lots, dispatch, or cold-chain.</p>
-            <Button size="sm" className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 h-7">
-              Open Copilot
-            </Button>
+
+            <div className="relative h-[68px] overflow-hidden">
+              {[
+                { label: "Released today", value: "24 lots", sub: "+12% vs yesterday" },
+                { label: "Cold-chain alert", value: "Z-A2 −16.8°C", sub: "Maintenance dispatched" },
+                { label: "Pending QC", value: "3 awaiting", sub: "Vanilla Bean priority" },
+                { label: "Dispatch queue", value: "5 samples", sub: "Aurora Beauty · Friday" },
+              ].map((b, i) => (
+                <div
+                  key={b.label}
+                  className="absolute inset-0 flex flex-col justify-center"
+                  style={{
+                    animation: "nowbrief-cycle 16s linear infinite",
+                    animationDelay: `${i * 4}s`,
+                    opacity: 0,
+                  }}
+                >
+                  <div className="text-[10px] uppercase tracking-wider mb-0.5 text-emerald-700">{b.label}</div>
+                  <div className="text-sm text-slate-900" style={{ fontWeight: 600 }}>{b.value}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 truncate">{b.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-1 mt-2 mb-3">
+              {[0, 1, 2, 3].map(i => (
+                <span
+                  key={i}
+                  className="block h-1 rounded-full bg-emerald-200"
+                  style={{
+                    width: 4,
+                    animation: "nowbrief-dot 16s linear infinite",
+                    animationDelay: `${i * 4}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+
+            <style>{`
+              @keyframes nowbrief-cycle {
+                0%, 22% { opacity: 1; transform: translateY(0); }
+                25%, 100% { opacity: 0; transform: translateY(-6px); }
+              }
+              @keyframes nowbrief-dot {
+                0%, 22% { background-color: rgb(5, 150, 105); width: 14px; }
+                25%, 100% { background-color: rgb(167, 243, 208); width: 4px; }
+              }
+            `}</style>
           </div>
         </div>
       </aside>
@@ -161,6 +214,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      <FloatingCopilot />
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Trend chart */}
-        <Card className="lg:col-span-2 p-5 gap-4">
+        <Card className="lg:col-span-2 min-w-0 p-5 gap-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-slate-900" style={{ fontWeight: 600 }}>Throughput · last 14 days</h3>
@@ -104,25 +104,25 @@ export function DashboardPage() {
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-sky-400" />Inbound</span>
             </div>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full min-w-0" style={{ height: 256 }}>
+            <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={200} debounce={50}>
               <AreaChart data={kpiTrend} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                <defs key="defs">
+                  <linearGradient key="g1" id="g1" x1="0" y1="0" x2="0" y2="1">
+                    <stop key="g1-0" offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop key="g1-1" offset="100%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                  <linearGradient key="g2" id="g2" x1="0" y1="0" x2="0" y2="1">
+                    <stop key="g2-0" offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
+                    <stop key="g2-1" offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                <Area type="monotone" dataKey="released" stroke="#10b981" strokeWidth={2} fill="url(#g1)" />
-                <Area type="monotone" dataKey="inbound" stroke="#38bdf8" strokeWidth={2} fill="url(#g2)" />
+                <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis key="x" dataKey="day" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis key="y" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <Tooltip key="tip" contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                <Area key="released" name="Released" type="monotone" dataKey="released" stroke="#10b981" strokeWidth={2} fill="url(#g1)" />
+                <Area key="inbound" name="Inbound" type="monotone" dataKey="inbound" stroke="#38bdf8" strokeWidth={2} fill="url(#g2)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
