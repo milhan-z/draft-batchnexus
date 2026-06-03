@@ -41,6 +41,51 @@ export default function CopilotPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEmpty = turns.length === 0;
 
+  // Voice state
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+
+  useEffect(() => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+    }
+  }, []);
+
+  const startVoiceCapture = () => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRecognition) return;
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      setVoiceListening(true);
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
+        setInput(transcript);
+      };
+
+      recognition.onerror = () => {
+        setVoiceListening(false);
+      };
+
+      recognition.onend = () => {
+        setVoiceListening(false);
+      };
+
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+    }
+  };
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns, loading]);
@@ -206,9 +251,26 @@ export default function CopilotPage() {
             onKeyDown={handleKeyDown}
             disabled={loading}
             placeholder="Ask Ops Copilot..."
-            className="w-full resize-none bg-transparent text-slate-900 placeholder-slate-400 text-[15px] px-4 py-3.5 pr-14 rounded-2xl focus:outline-none disabled:opacity-60"
+            className="w-full resize-none bg-transparent text-slate-900 placeholder-slate-400 text-[15px] px-4 py-3.5 pr-24 rounded-2xl focus:outline-none disabled:opacity-60"
             style={{ minHeight: "52px", maxHeight: "160px" }}
           />
+          {/* Voice Input Assistance */}
+          <button
+            type="button"
+            onClick={startVoiceCapture}
+            disabled={loading || (!speechSupported && !voiceListening)}
+            className={`absolute right-12 bottom-2 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+              voiceListening 
+                ? "bg-rose-500 text-white animate-pulse" 
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            }`}
+            title={speechSupported ? "Voice input" : "Voice input experimental."}
+            aria-label="Voice input"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {voiceListening ? "graphic_eq" : "mic"}
+            </span>
+          </button>
           <button
             type="submit"
             disabled={!input.trim() || loading}

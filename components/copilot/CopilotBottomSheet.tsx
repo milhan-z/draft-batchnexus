@@ -57,6 +57,51 @@ export function CopilotDock({ open, onClose, selectedLot }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Voice state
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+
+  useEffect(() => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+    }
+  }, []);
+
+  const startVoiceCapture = () => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRecognition) return;
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      setVoiceListening(true);
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
+        setInput(transcript);
+      };
+
+      recognition.onerror = () => {
+        setVoiceListening(false);
+      };
+
+      recognition.onend = () => {
+        setVoiceListening(false);
+      };
+
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+    }
+  };
+
   // Page context used in logic only (not displayed)
   const prompts = getPromptsForPage(pathname);
   const pageLabel = getPageLabel(pathname);
@@ -346,6 +391,24 @@ export function CopilotDock({ open, onClose, selectedLot }: Props) {
             aria-label="Close Copilot"
           >
             <span className="material-symbols-outlined text-[15px]">close</span>
+          </button>
+
+          {/* Voice Input Assistance */}
+          <button
+            type="button"
+            onClick={startVoiceCapture}
+            disabled={isLoading || (!speechSupported && !voiceListening)}
+            className={`shrink-0 p-1 mr-1 flex items-center justify-center rounded-full transition-all ${
+              voiceListening 
+                ? "bg-rose-500 text-white animate-pulse" 
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            }`}
+            title={speechSupported ? "Voice input" : "Voice input experimental."}
+            aria-label="Voice input"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {voiceListening ? "graphic_eq" : "mic"}
+            </span>
           </button>
 
           <button
