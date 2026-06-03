@@ -259,11 +259,12 @@ export default function CopilotPage() {
             type="button"
             onClick={startVoiceCapture}
             disabled={loading || (!speechSupported && !voiceListening)}
-            className={`absolute right-12 bottom-2 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+            className={`absolute w-9 h-9 rounded-full flex items-center justify-center transition-all ${
               voiceListening 
                 ? "bg-rose-500 text-white animate-pulse" 
                 : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-50"
             }`}
+            style={{ right: "48px", bottom: "8px" }}
             title={speechSupported ? "Voice input" : "Voice input experimental."}
             aria-label="Voice input"
           >
