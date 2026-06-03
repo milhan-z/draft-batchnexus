@@ -152,7 +152,9 @@ export default function QCStationPage() {
                 inspected_at: new Date().toISOString(),
             });
 
-            // 3. Create Lot Record with source_receipt_id for traceability
+            // 3. Create Lot Record with source_receipt_id for traceability.
+            //    The lot enters the Warehouse pending-slotting queue immediately,
+            //    so its status is "Awaiting Slot" (the receipt stays "QC Released").
             await createItem("lots", {
                 id: lotNo,
                 lot_number: lotNo,
@@ -160,7 +162,8 @@ export default function QCStationPage() {
                 source_receipt_id: selectedTask.id,
                 material_id: selectedTask.material_id,
                 quantity: selectedTask.quantity,
-                status: "QC Released",
+                status: "Awaiting Slot",
+                released_at: new Date().toISOString(),
                 date_created: new Date().toISOString(),
             });
 
@@ -180,7 +183,7 @@ export default function QCStationPage() {
                 role: "BatchNexus",
                 action: "Generated lot number",
                 entity: lotNo,
-                change_detail: `Lot ${lotNo} generated from ${selectedTask.receipt_no || selectedTask.id}.`,
+                change_detail: `Lot ${lotNo} generated from ${selectedTask.receipt_no || selectedTask.id}. Status: Awaiting Slot — added to Warehouse pending slotting queue.`,
             });
 
             notifications.show({

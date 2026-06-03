@@ -48,7 +48,7 @@ An AI-assisted manufacturing operations control tower built for **Sima Arôme**.
 
 
 ### 3. Computer Vision QC
-*Revolutionizes quality control with an on-device AI vision engine. It analyzes sample photos pixel-by-pixel to calculate color deviation (ΔE) and detect dark-spot anomalies. It acts as a highly accurate screening assistant before final human sign-off.*
+*Revolutionizes quality control with an on-device AI vision engine. It analyzes sample photos pixel-by-pixel to calculate color deviation (ΔE) and detect dark-spot anomalies. It acts as an AI-assisted first inspection layer before final human sign-off.*
 
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c9184896-317a-419a-b3ef-6b7ba22f10d6" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3d125f93-49e0-4b2c-8aac-6dafd18b58ed" />
@@ -89,8 +89,8 @@ An AI-assisted manufacturing operations control tower built for **Sima Arôme**.
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/376d5387-a8c0-4e65-98b5-54cb041d3957" />
 
 
-### 10. Immutable Audit Log
-*The ultimate compliance tool for ISO and FDA standards. Every single action taken in BatchNexus is permanently recorded with the actor's name, role, precise timestamp, and change details. No data can ever be silently altered.*
+### 10. Tamper-Evident Audit Log
+*A compliance-oriented audit tool aligned with ISO and quality-management practices. Every critical action taken in BatchNexus is audit-logged with the actor, role, timestamp, entity, and change details, and each entry carries a demo tamper-evident hash.*
 
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8e1a3c93-6808-4c1f-bdc6-3120fd8c6e8f" />
 
@@ -107,9 +107,9 @@ Sima Arôme produces premium natural extracts where precision is non-negotiable.
 ### The Solution: BatchNexus AI Control Tower
 BatchNexus transforms fragmented manual workflows into a **single, intelligent, event-driven source of truth**. 
 - **AI-Powered Intake:** Groq NLP (Llama 3.1) instantly structures messy unstructured supplier data into clean digital records, saving hours of manual typing.
-- **Computer Vision QC:** On-device visual AI screens sample photos pixel-by-pixel for color variance (ΔE) and defects, acting as a highly accurate pre-screening assistant for the lab.
+- **Computer Vision QC:** On-device visual AI screens sample photos pixel-by-pixel for color variance (ΔE) and defects, acting as an AI-assisted first inspection layer for the lab.
 - **Smart, Hazard-Aware Slotting:** A digital warehouse twin mathematically enforces hazard segregation and cold-chain compliance before a drum is ever physically moved.
-- **Effortless Traceability:** Every single action is immutably recorded in the Audit Log, offering 1-click end-to-end provenance tracing that makes compliance audits instantaneous.
+- **Effortless Traceability:** Critical actions are audit-logged with actor, role, timestamp, entity, and change details, offering 1-click end-to-end provenance tracing that makes compliance audits far faster.
 
 
 ## Installation Steps
@@ -118,8 +118,8 @@ Requires **Node.js 18.17+** and **pnpm**.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Arkanzahir/batchnexus.git
-   cd batchnexus
+   git clone https://github.com/milhan-z/draft-batchnexus.git
+   cd draft-batchnexus
    ```
 
 2. **Install dependencies:**
@@ -154,7 +154,7 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
 4. **Lot Traceability:** Go to `Lots` and click on your new Lot to view its full event-based provenance timeline from receipt to QC.
 5. **Warehouse Smart Slotting:** Navigate to `Warehouse`. Drag the unassigned Lot from the left panel and drop it into a specific Bin/Zone to assign its location.
 6. **Ops Copilot:** Use the chat icon to query the operational database in natural language (e.g., *"Where is Lot 2026-X stored?"*).
-7. **Audit Log:** Finally, navigate to `Governance -> Audit Log` to verify that every action taken above was immutably recorded.
+7. **Audit Log:** Finally, navigate to `Governance -> Audit Log` to verify that every critical action taken above was audit-logged with actor, role, timestamp, entity, and change details.
 
 
 ## Tech Stack & Architecture
@@ -164,11 +164,11 @@ To fully experience the BatchNexus capabilities, follow this operational workflo
 - **AI Integration:** 
   - Groq (Llama 3.1) for document extraction & summarization
   - On-device Canvas computer-vision engine (`lib/visionQC.ts`) for color/defect analysis
-- **Resilience:** Graceful local Edge fallback (`lib/demoStore.ts`) ensuring 100% uptime even if the DaaS API goes down.
+- **Resilience:** Graceful local Edge fallback (`lib/demoStore.ts`) for high availability even if the DaaS API is unavailable.
 
 > [!TIP]
 > 🏆 **Enterprise Readiness via BuildPad DaaS**
-> To meet the strictest industry standards for auditability, security, and scalability out of the box, the entire backend infrastructure of BatchNexus is powered natively by **BuildPad DaaS**. We intentionally bypassed building a fragile custom backend to leverage BuildPad's robust PostgreSQL architecture, ensuring 100% compliance with CyberHack's Enterprise Readiness judging criteria.
+> To meet demanding industry standards for auditability, security, and scalability out of the box, the entire backend infrastructure of BatchNexus is powered natively by **BuildPad DaaS**. We intentionally bypassed building a fragile custom backend to leverage BuildPad's robust PostgreSQL architecture, supporting enterprise-readiness patterns aligned with CyberHack's Enterprise Readiness judging criteria.
 
 ### System Architecture & Data Flow
 

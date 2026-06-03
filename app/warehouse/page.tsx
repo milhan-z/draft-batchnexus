@@ -27,6 +27,13 @@ export default function WarehousePage() {
     const [overrideReason, setOverrideReason] = useState("");
     const [policyViolation, setPolicyViolation] = useState<string | null>(null);
 
+    // Voice-assisted command state. Voice can ONLY open the confirmation modal —
+    // it never assigns a slot automatically. Human confirmation stays mandatory.
+    const [voiceText, setVoiceText] = useState("");
+    const [voiceListening, setVoiceListening] = useState(false);
+    const [voiceFeedback, setVoiceFeedback] = useState<{ tone: "ok" | "warn" | "info"; message: string } | null>(null);
+    const [voiceOpen, setVoiceOpen] = useState(false);
+
     const loadData = async () => {
         setLoading(true);
         try {
@@ -146,6 +153,87 @@ export default function WarehousePage() {
     };
 
     const hasPermission = canAssignSlot(role);
+
+    // ── Voice-assisted command ────────────────────────────────
+    // Interprets a spoken/typed command. The only recognised assignment phrase
+    // is "assign this lot to recommended slot", and it only OPENS the confirm
+    // modal — it never assigns automatically. Human confirmation is required
+    // and the eventual assignment is audit-logged via handleAssignSlot().
+    const runVoiceCommand = (raw: string) => {
+        const text = raw.trim().toLowerCase();
+        if (!text) return;
+
+        const wantsAssign =
+            text.includes("assign") &&
+            (text.includes("recommended") || text.includes("recommend") || text.includes("ai")) &&
+            text.includes("slot");
+
+        if (!wantsAssign) {
+            setVoiceFeedback({
+                tone: "info",
+                message: 'Command not recognised. Try: "assign this lot to recommended slot".',
+            });
+            return;
+        }
+        if (!selectedLot) {
+            setVoiceFeedback({ tone: "warn", message: "Select a lot from the queue first." });
+            return;
+        }
+        if (!hasPermission) {
+            setVoiceFeedback({ tone: "warn", message: `Your role (${role}) cannot assign slots.` });
+            return;
+        }
+        // Always route to the AI recommendation and open the confirmation modal.
+        // No automatic assignment — human confirmation is mandatory.
+        setSlotMode("ai");
+        setPolicyViolation(null);
+        setManualZone("");
+        setOverrideReason("");
+        setShowConfirm(true);
+        setVoiceOpen(false);
+        setVoiceFeedback({
+            tone: "ok",
+            message: `Opening confirmation for ${selectedLot.lot_number} → ${recommendation?.bin || "recommended slot"}. Human confirmation required.`,
+        });
+    };
+
+    // Optional speech recognition (Web Speech API) when available; otherwise the
+    // typed input still works as a deterministic fallback for the demo.
+    const startVoiceCapture = () => {
+        const SpeechRecognition =
+            typeof window !== "undefined" &&
+            ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+        if (!SpeechRecognition) {
+            setVoiceFeedback({
+                tone: "info",
+                message: "Live mic not supported in this browser. Type the command and press Run.",
+            });
+            return;
+        }
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = "en-US";
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            setVoiceListening(true);
+            setVoiceFeedback({ tone: "info", message: "Listening… say \"assign this lot to recommended slot\"." });
+            recognition.onresult = (event: any) => {
+                const transcript = event.results?.[0]?.[0]?.transcript || "";
+                setVoiceText(transcript);
+                runVoiceCommand(transcript);
+            };
+            recognition.onerror = () => {
+                setVoiceListening(false);
+                setVoiceFeedback({ tone: "warn", message: "Could not capture audio. Type the command instead." });
+            };
+            recognition.onend = () => setVoiceListening(false);
+            recognition.start();
+        } catch {
+            setVoiceListening(false);
+            setVoiceFeedback({ tone: "info", message: "Live mic unavailable. Type the command and press Run." });
+        }
+    };
+
 
     // ── Dynamic smart-slot engine ─────────────────────────────
     // Recommends a zone based on the selected lot's hazard class and required
@@ -271,7 +359,7 @@ export default function WarehousePage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Left: Pending Slotting Queue */}
-                <div className="lg:col-span-3 flex flex-col ui-card overflow-hidden">
+                <div className="order-1 lg:col-span-3 flex flex-col ui-card overflow-hidden">
                     <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex justify-between items-center">
                         <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
                             <span className="material-symbols-outlined text-slate-400 text-[18px]">inbox</span>
@@ -305,8 +393,8 @@ export default function WarehousePage() {
                 </div>
 
                 {/* Center: Zone Map (visual) */}
-                <div className="lg:col-span-5 ui-card overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                <div className="order-3 lg:order-2 lg:col-span-5 ui-card overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 flex flex-wrap gap-2 justify-between items-center">
                         <h3 className="font-semibold text-sm text-slate-900">Zone Map</h3>
                         <div className="flex gap-3 text-[11px] font-medium text-slate-500">
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Ambient</span>
@@ -316,7 +404,7 @@ export default function WarehousePage() {
                     </div>
                     
                     {/* Visual Zone Grid */}
-                    <div className="p-5 space-y-4">
+                    <div className="p-4 sm:p-5 space-y-4">
                         {zones.map(z => {
                             let borderColor = "border-slate-200";
                             let bgColor = "bg-white";
@@ -397,7 +485,7 @@ export default function WarehousePage() {
                 </div>
 
                 {/* Right: AI Recommendation + Assignment */}
-                <div className="lg:col-span-4 flex flex-col gap-4">
+                <div className="order-2 lg:order-3 lg:col-span-4 flex flex-col gap-4">
                     {!selectedLot ? (
                         <div className="ui-card flex-1 flex flex-col items-center justify-center">
                             <EmptyState icon="ads_click" title="No lot selected" description="Select a lot from the queue to view smart slot recommendations." />
@@ -530,7 +618,7 @@ export default function WarehousePage() {
                         <p className="text-[11px] text-slate-500">Live temperature trend per environment-controlled zone. Out-of-range readings are flagged automatically.</p>
                     </div>
                 </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {zones
                         .filter((z: any) => typeof z.temp_min === "number" && typeof z.temp_max === "number" && z.id !== "HOLD-QC")
                         .map((z: any) => {
@@ -576,6 +664,115 @@ export default function WarehousePage() {
                 onCancel={() => setShowConfirm(false)}
                 isLoading={processing}
             />
+
+            {/* Floating voice-assist button — always reachable, every screen size */}
+            {!voiceOpen && !showConfirm && (
+                <button
+                    type="button"
+                    onClick={() => { setVoiceOpen(true); setVoiceFeedback(null); }}
+                    aria-label="Voice-assisted warehouse action"
+                    className="fixed right-4 bottom-24 md:bottom-6 z-40 h-14 px-4 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 flex items-center gap-2 hover:bg-emerald-700 active:scale-95 transition-all ring-4 ring-white/60"
+                >
+                    <span className="material-symbols-outlined text-[24px] icon-fill">mic</span>
+                    <span className="text-sm font-semibold pr-1">Voice</span>
+                </button>
+            )}
+
+            {/* Voice-assist panel — bottom sheet on mobile, centered card on desktop */}
+            {voiceOpen && (
+                <div className="fixed inset-0 z-50 flex sm:items-center justify-center items-end" onClick={() => { setVoiceOpen(false); if (voiceListening) setVoiceListening(false); }}>
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+                    <div
+                        className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl border border-slate-200 shadow-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-rise"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden" />
+                        <div className="flex items-start gap-3 mb-4">
+                            <span className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center shrink-0">
+                                <span className="material-symbols-outlined text-[20px] icon-fill">mic</span>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-slate-900">Voice-assisted warehouse action</h3>
+                                <p className="text-xs text-slate-500 leading-snug">Opens the confirmation only — it never assigns automatically.</p>
+                            </div>
+                            <button onClick={() => setVoiceOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-600 -mt-1 -mr-1 p-1">
+                                <span className="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                        </div>
+
+                        {selectedLot ? (
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-3 flex items-center gap-2 text-xs">
+                                <span className="material-symbols-outlined text-emerald-600 text-[16px]">inventory_2</span>
+                                <span className="font-mono font-semibold text-emerald-700">{selectedLot.lot_number}</span>
+                                <span className="text-slate-400">→</span>
+                                <span className="font-semibold text-slate-700">{recommendation?.bin || "recommended slot"}</span>
+                            </div>
+                        ) : (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-2 mb-3 text-xs flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[16px]">info</span>
+                                Select a lot from the queue first.
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-2">
+                            <input
+                                type="text"
+                                value={voiceText}
+                                onChange={(e) => setVoiceText(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") runVoiceCommand(voiceText); }}
+                                placeholder='e.g. "assign this lot to recommended slot"'
+                                className="field h-11 text-sm"
+                                autoFocus
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={startVoiceCapture}
+                                    disabled={voiceListening}
+                                    className="btn btn-secondary h-11 px-4 shrink-0"
+                                >
+                                    <span className={`material-symbols-outlined text-[20px] ${voiceListening ? "text-emerald-600 animate-pulse" : ""}`}>{voiceListening ? "graphic_eq" : "mic"}</span>
+                                    <span className="text-sm">{voiceListening ? "Listening" : "Speak"}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => runVoiceCommand(voiceText)}
+                                    className="btn btn-primary h-11 flex-1 text-sm"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                                    Run command
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Quick suggestion chip */}
+                        <button
+                            type="button"
+                            onClick={() => { setVoiceText("assign this lot to recommended slot"); runVoiceCommand("assign this lot to recommended slot"); }}
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 hover:bg-emerald-100 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">bolt</span>
+                            “assign this lot to recommended slot”
+                        </button>
+
+                        {voiceFeedback && (
+                            <div className={`mt-3 text-xs rounded-lg p-2.5 flex items-start gap-2 border ${
+                                voiceFeedback.tone === "ok" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                : voiceFeedback.tone === "warn" ? "bg-amber-50 border-amber-200 text-amber-700"
+                                : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                                <span className="material-symbols-outlined text-[15px] mt-px shrink-0">
+                                    {voiceFeedback.tone === "ok" ? "task_alt" : voiceFeedback.tone === "warn" ? "warning" : "info"}
+                                </span>
+                                <span>{voiceFeedback.message}</span>
+                            </div>
+                        )}
+                        <p className="text-[11px] text-slate-400 mt-3 flex items-start gap-1.5">
+                            <span className="material-symbols-outlined text-[14px] shrink-0">verified_user</span>
+                            Human confirmation is required for every assignment, and each action is audit-logged.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

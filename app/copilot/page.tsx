@@ -54,8 +54,8 @@ export default function CopilotPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] max-w-4xl mx-auto w-full animate-fade-in">
-            <div className="mb-5">
+        <div className="flex flex-col h-[calc(100dvh-220px)] md:h-[calc(100vh-140px)] max-w-4xl mx-auto w-full animate-fade-in">
+            <div className="mb-4 md:mb-5">
                 <div className="flex items-center gap-3">
                     <div className="hidden sm:grid place-items-center w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
                         <span className="material-symbols-outlined text-[22px] icon-fill">smart_toy</span>
@@ -68,7 +68,7 @@ export default function CopilotPage() {
             </div>
 
             <div className="flex-1 ui-card flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto soft-scroll p-6 space-y-5">
+                <div className="flex-1 overflow-y-auto soft-scroll p-4 sm:p-6 space-y-5">
                     {messages.map(msg => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-rise`}>
                             <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>

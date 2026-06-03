@@ -6,6 +6,7 @@ import { notifications } from "@mantine/notifications";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/States";
 import { RadialGauge } from "@/components/shared/Charts";
+import { downloadText, dateStamp } from "@/lib/exportUtils";
 
 interface ModuleKPI {
     label: string;
@@ -224,13 +225,7 @@ export default function AISummaryPage() {
         result.recommendations.forEach(r => { text += `  → ${r}\n`; });
         text += `\nSources: ${result.sources.join(", ")}\n`;
 
-        const blob = new Blob([text], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `operations_summary_${new Date().toISOString().split("T")[0]}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadText(`operations_summary_${dateStamp()}.txt`, text);
     };
 
     const statusColor = (s: string) => s === "critical" ? "text-rose-600" : s === "warning" ? "text-amber-600" : "text-emerald-600";

@@ -5,6 +5,7 @@ import { fetchItems } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState, SkeletonRows } from "@/components/shared/States";
+import { exportCsv as exportCsvFile, dateStamp } from "@/lib/exportUtils";
 
 interface InboundReceipt {
     id: string;
@@ -104,17 +105,18 @@ export default function InboundIntakePage() {
     };
 
     const exportCsv = () => {
-        let csv = "Batch Ref,Material,Supplier,Quantity,Unit,Hazard,Temperature,Status\n";
-        filtered.forEach((r: any) => {
-            csv += `"${r.batch_reference}","${getMaterialName(r)}","${getSupplierCode(r)}",${r.quantity},"${r.unit}","${r.hazard_class}","${r.temperature_requirement}","${r.status}"\n`;
-        });
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `inbound_receipts_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+        const header = ["Batch Ref", "Material", "Supplier", "Quantity", "Unit", "Hazard", "Temperature", "Status"];
+        const rows = filtered.map((r: any) => [
+            r.batch_reference,
+            getMaterialName(r),
+            getSupplierCode(r),
+            r.quantity,
+            r.unit,
+            r.hazard_class,
+            r.temperature_requirement,
+            r.status,
+        ]);
+        exportCsvFile(`inbound_receipts_${dateStamp()}.csv`, header, rows);
     };
 
     const filtered = useMemo(() => {

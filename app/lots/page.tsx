@@ -4,6 +4,7 @@ import { fetchItems } from "@/lib/api/client";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState, Spinner } from "@/components/shared/States";
+import { csvCell, downloadCsv } from "@/lib/exportUtils";
 
 export default function LotsTraceabilityPage() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -223,12 +224,12 @@ export default function LotsTraceabilityPage() {
                     ) : (
                         <div className="flex flex-col h-full">
                             {/* Header with Lot Summary */}
-                            <div className="p-6 border-b border-slate-100 bg-slate-50/40">
+                            <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/40">
                                 <div className="flex flex-col lg:flex-row gap-6">
                                     {/* Left: Lot title */}
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between mb-2 gap-3">
-                                            <h3 className="font-display font-semibold text-3xl text-slate-900">{selectedLot.lot_number}</h3>
+                                            <h3 className="font-display font-semibold text-2xl sm:text-3xl text-slate-900 break-all">{selectedLot.lot_number}</h3>
                                             <StatusBadge status={selectedLot.status} />
                                         </div>
                                         <p className="text-sm font-semibold text-slate-800">{getMaterialName(selectedLot.material_id)}</p>
@@ -264,16 +265,29 @@ export default function LotsTraceabilityPage() {
                                                     const sup = receipt ? suppliers.get(receipt.supplier_id) : null;
                                                     const lotQc = qc.filter((q: any) => q.receipt_id === ((lot.receipt_id || lot.source_receipt_id) || lot.receipt_id));
                                                     const lotDisp = dispatches.filter((d: any) => d.lot_id === lot.id);
-                                                    let csv = "BATCHNEXUS TRACEABILITY REPORT\n";
-                                                    csv += `Generated:,${new Date().toISOString()}\n\n`;
-                                                    csv += `Lot Number:,${lot.lot_number}\nMaterial:,${mat?.name || "—"}\nSupplier:,${sup?.name || "—"}\nQuantity:,${lot.quantity}\nStatus:,${lot.status}\nLocation:,${lot.current_location || "N/A"}\n\n`;
-                                                    if (lotQc.length > 0) { csv += "QC INSPECTION\nColour,Defect,Foreign,Decision\n"; lotQc.forEach((q: any) => { csv += `${q.colour_score || "—"},${q.defect_risk || "—"},${q.foreign_matter_risk || "—"},${q.human_decision || "—"}\n`; }); csv += "\n"; }
-                                                    if (lotDisp.length > 0) { csv += "DISPATCHES\nCustomer,Destination,Status\n"; lotDisp.forEach((d: any) => { csv += `${d.customer_name},${d.destination},${d.status}\n`; }); }
-                                                    const blob = new Blob([csv], { type: "text/csv" });
-                                                    const url = URL.createObjectURL(blob);
-                                                    const a = document.createElement("a");
-                                                    a.href = url; a.download = `trace_${lot.lot_number}.csv`; a.click();
-                                                    URL.revokeObjectURL(url);
+                                                    const lines: string[] = [];
+                                                    lines.push(csvCell("BATCHNEXUS TRACEABILITY REPORT"));
+                                                    lines.push([csvCell("Generated"), csvCell(new Date().toISOString())].join(","));
+                                                    lines.push("");
+                                                    lines.push([csvCell("Lot Number"), csvCell(lot.lot_number)].join(","));
+                                                    lines.push([csvCell("Material"), csvCell(mat?.name || "—")].join(","));
+                                                    lines.push([csvCell("Supplier"), csvCell(sup?.name || "—")].join(","));
+                                                    lines.push([csvCell("Quantity"), csvCell(lot.quantity)].join(","));
+                                                    lines.push([csvCell("Status"), csvCell(lot.status)].join(","));
+                                                    lines.push([csvCell("Location"), csvCell(lot.current_location || "N/A")].join(","));
+                                                    if (lotQc.length > 0) {
+                                                        lines.push("");
+                                                        lines.push(csvCell("QC INSPECTION"));
+                                                        lines.push(["Colour", "Defect", "Foreign", "Decision"].map(csvCell).join(","));
+                                                        lotQc.forEach((q: any) => lines.push([q.colour_score || "—", q.defect_risk || "—", q.foreign_matter_risk || "—", q.human_decision || "—"].map(csvCell).join(",")));
+                                                    }
+                                                    if (lotDisp.length > 0) {
+                                                        lines.push("");
+                                                        lines.push(csvCell("DISPATCHES"));
+                                                        lines.push(["Customer", "Destination", "Status"].map(csvCell).join(","));
+                                                        lotDisp.forEach((d: any) => lines.push([d.customer_name, d.destination, d.status].map(csvCell).join(",")));
+                                                    }
+                                                    downloadCsv(`trace_${lot.lot_number}.csv`, lines.join("\r\n"));
                                                 }}
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">download</span>
@@ -303,7 +317,7 @@ export default function LotsTraceabilityPage() {
                                 ))}
                             </div>
 
-                            <div className="flex-1 overflow-y-auto soft-scroll p-6 bg-slate-50/30">
+                            <div className="flex-1 overflow-y-auto soft-scroll p-4 sm:p-6 bg-slate-50/30">
                                 {activeTab === 'traceability' && renderTraceabilityTimeline()}
                                 
                                 {activeTab === 'overview' && (

@@ -60,6 +60,8 @@ export default function PPICPage() {
     const [materials, setMaterials] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+    // Mobile tap-to-move: id of the lot whose move menu is currently open.
+    const [moveMenuLotId, setMoveMenuLotId] = useState<string | null>(null);
 
     // Copilot suggestion
     const [applying, setApplying] = useState(false);
@@ -118,6 +120,14 @@ export default function PPICPage() {
         const lotId = e.dataTransfer.getData("lotId");
         const fromStatus = e.dataTransfer.getData("fromStatus");
         if (!lotId || !fromStatus) return;
+        await applyTransition(lotId, fromStatus, targetStatus);
+    };
+
+    // Shared transition logic used by both desktop drag-drop and the mobile
+    // tap-to-move menu. Validates permission + allowed transitions, then
+    // persists and audit-logs the change with optimistic UI update.
+    const applyTransition = async (lotId: string, fromStatus: string, targetStatus: string) => {
+        if (!lotId || !fromStatus) return;
         if (fromStatus === targetStatus) return;
 
         // Check permission
@@ -156,6 +166,18 @@ export default function PPICPage() {
         }
     };
 
+    // Targets a lot can move to from its current (display) status, for the
+    // mobile tap-to-move menu. Maps target status ids to friendly column labels.
+    const getMoveTargets = (status: string): { id: string; label: string }[] => {
+        const allowed = VALID_TRANSITIONS[status] || [];
+        return allowed
+            .map(id => {
+                const col = COLUMNS.find(c => c.id === id);
+                return col ? { id: col.id, label: col.label } : null;
+            })
+            .filter((x): x is { id: string; label: string } => x !== null);
+    };
+
     // ── Copilot Apply ──────────────────────────────────────
     const handleApplyCopilot = async () => {
         if (!copilotLot || !hasPermission) return;
@@ -187,7 +209,7 @@ export default function PPICPage() {
             <PageHeader
                 icon="view_kanban"
                 title="PPIC Board"
-                subtitle="Production planning — drag lots between stages. Transitions are validated and audit-logged."
+                subtitle="Production planning — drag lots between stages (or tap “Move to…” on mobile). Transitions are validated and audit-logged."
                 actions={!hasPermission && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
                         <span className="material-symbols-outlined text-[16px]">visibility</span>
@@ -277,7 +299,7 @@ export default function PPICPage() {
                         return (
                             <div
                                 key={col.id}
-                                className={`flex flex-col rounded-xl border transition-all min-h-[420px] ${isDragOver ? "border-emerald-400 bg-emerald-50/40 ring-2 ring-emerald-200" : "border-slate-200 bg-slate-50/60"}`}
+                                className={`flex flex-col rounded-xl border transition-all min-h-[200px] md:min-h-[420px] ${isDragOver ? "border-emerald-400 bg-emerald-50/40 ring-2 ring-emerald-200" : "border-slate-200 bg-slate-50/60"}`}
                                 onDragOver={(e) => handleDragOver(e, col.id)}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, col.id)}
@@ -290,10 +312,13 @@ export default function PPICPage() {
                                     <span className="bg-white border border-slate-200 px-2 py-0.5 rounded-full text-[11px] font-semibold text-slate-500">{columnLots.length}</span>
                                 </div>
                                 <div className="p-3 space-y-2.5 flex-1 overflow-y-auto soft-scroll">
-                                    {columnLots.length > 0 ? columnLots.map((item) => (
+                                    {columnLots.length > 0 ? columnLots.map((item) => {
+                                        const moveTargets = getMoveTargets(getDisplayStatus(item.status));
+                                        const menuOpen = moveMenuLotId === item.id;
+                                        return (
                                         <div
                                             key={item.id}
-                                            className={`bg-white rounded-xl border border-slate-200 p-4 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md ${hasPermission ? "cursor-grab active:cursor-grabbing active:shadow-lg active:rotate-1" : "cursor-default"}`}
+                                            className={`relative bg-white rounded-xl border border-slate-200 p-4 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md ${hasPermission ? "md:cursor-grab md:active:cursor-grabbing active:shadow-lg md:active:rotate-1" : "cursor-default"}`}
                                             draggable={hasPermission}
                                             onDragStart={(e) => handleDragStart(e, item.id, getDisplayStatus(item.status))}
                                         >
@@ -315,13 +340,29 @@ export default function PPICPage() {
                                                 </div>
                                             )}
                                             {hasPermission && (
-                                                <div className="mt-2 -mb-1 flex items-center gap-1 text-[10px] text-slate-300">
-                                                    <span className="material-symbols-outlined text-[12px]">drag_indicator</span>
-                                                    Drag to move
-                                                </div>
+                                                <>
+                                                    {/* Desktop drag hint */}
+                                                    <div className="mt-2 -mb-1 hidden md:flex items-center gap-1 text-[10px] text-slate-300">
+                                                        <span className="material-symbols-outlined text-[12px]">drag_indicator</span>
+                                                        Drag to move
+                                                    </div>
+                                                    {/* Mobile tap-to-move button */}
+                                                    {moveTargets.length > 0 && (
+                                                        <button
+                                                            onClick={() => setMoveMenuLotId(menuOpen ? null : item.id)}
+                                                            className="md:hidden mt-3 w-full btn btn-secondary text-xs py-2"
+                                                            aria-haspopup="true"
+                                                            aria-expanded={menuOpen}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                                                            Move to…
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
-                                    )) : (
+                                        );
+                                    }) : (
                                         <div className="flex flex-col items-center justify-center py-14 text-slate-300">
                                             <span className="material-symbols-outlined text-3xl mb-2">{col.icon}</span>
                                             <p className="text-xs text-slate-400">{hasPermission ? "Drop lots here" : "No items"}</p>
@@ -334,6 +375,43 @@ export default function PPICPage() {
                 </div>
                 </>
             )}
+
+            {/* Mobile tap-to-move bottom sheet */}
+            {moveMenuLotId && (() => {
+                const lot = lots.find(l => l.id === moveMenuLotId);
+                if (!lot) return null;
+                const fromStatus = getDisplayStatus(lot.status);
+                const targets = getMoveTargets(fromStatus);
+                return (
+                    <div className="fixed inset-0 z-50 md:hidden" onClick={() => setMoveMenuLotId(null)}>
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                        <div className="absolute bottom-0 left-0 w-full bg-white border-t border-slate-200 rounded-t-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] animate-rise" onClick={e => e.stopPropagation()}>
+                            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-3" />
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="font-mono text-xs font-semibold text-emerald-700">{lot.lot_number || lot.id.substring(0, 8)}</span>
+                                <StatusBadge status={fromStatus} />
+                            </div>
+                            <p className="text-xs text-slate-500 mb-3">Move {getMaterialName(lot.material_id)} to:</p>
+                            <div className="space-y-2">
+                                {targets.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={async () => { setMoveMenuLotId(null); await applyTransition(lot.id, fromStatus, t.id); }}
+                                        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-left"
+                                    >
+                                        <span className="flex items-center gap-2.5 text-sm font-medium text-slate-800">
+                                            <span className={`w-2.5 h-2.5 rounded-full ${COLUMNS.find(c => c.id === t.id)?.color || "bg-slate-400"}`} />
+                                            {t.label}
+                                        </span>
+                                        <span className="material-symbols-outlined text-slate-400 text-[18px]">arrow_forward</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => setMoveMenuLotId(null)} className="w-full mt-3 py-2.5 text-sm font-medium text-slate-500">Cancel</button>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
